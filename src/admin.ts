@@ -59,21 +59,22 @@ function jsonError(c: any, status: number, message: string) {
   return c.json({ error: message }, status);
 }
 
-const MODES = new Set(["offline", "online"]);
 const ONLINE_ROOM_PREFIX = "Online-";
 
 /**
  * Resolve the effective mode for a session.
  *
- * `schedules.room` is plain TEXT with no foreign key, so room and mode can
- * disagree — e.g. a physical room tagged 'online', which would mark a real
- * classroom busy in the occupancy view. A room under the `Online-` prefix is
- * always a virtual room, so it forces mode='online'; everything else takes
- * the requested mode, defaulting to 'offline'.
+ * `schedules.room` is plain TEXT with no foreign key, so the room is the only
+ * trustworthy signal: a room under the `Online-` prefix is always virtual and
+ * yields 'online'; any physical room yields 'offline'. Letting the caller's
+ * `mode` through would let a physical room stay tagged 'online', which would
+ * wrongly mark a real classroom busy in the occupancy view.
+ *
+ * This mirrors `checkRoom()` in tools/validate.ts, which rejects the same
+ * mismatch in the seed JSON.
  */
-function effectiveMode(room: string, mode: string | undefined): string {
-  if (room.startsWith(ONLINE_ROOM_PREFIX)) return "online";
-  return MODES.has(mode ?? "") ? (mode as string) : "offline";
+function effectiveMode(room: string): string {
+  return room.startsWith(ONLINE_ROOM_PREFIX) ? "online" : "offline";
 }
 
 admin.post("/auth", async (c) => {
@@ -149,7 +150,7 @@ admin.post("/schedules", async (c) => {
     time: body.time, course_code: body.course_code, course_name: body.course_name,
     type: body.type, lecturer_code: body.lecturer_code, lecturer: body.lecturer ?? "",
     room: body.room, slot_order: body.slot_order ?? 0,
-    mode: effectiveMode(body.room, body.mode),
+    mode: effectiveMode(body.room),
   });
 
   return c.json({ ok: true, id: newId }, 201);
@@ -193,7 +194,7 @@ admin.put("/schedules/:id", async (c) => {
     lecturer: body.lecturer ?? existing.lecturer,
     room: body.room ?? existing.room,
     slot_order: body.slot_order ?? existing.slot_order,
-    mode: effectiveMode(body.room ?? existing.room, body.mode ?? existing.mode),
+    mode: effectiveMode(body.room ?? existing.room),
   };
 
   const success = await updateScheduleRow(c.env.jtk25_schedules, id, updated);
