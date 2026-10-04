@@ -81,7 +81,7 @@ export default function Combobox({ value, onChange, options, placeholder }: Comb
         }}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg"
+        className="w-full px-3 py-2 border border-[var(--border-strong)] bg-[var(--surface-raised)] text-primary-token rounded-lg"
       />
       {value && (
         <button
@@ -101,7 +101,7 @@ export default function Combobox({ value, onChange, options, placeholder }: Comb
       {open && filtered.length > 0 && (
         <ul
           ref={listRef}
-          className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-auto"
+          className="absolute z-10 mt-1 w-full bg-[var(--surface-raised)] border border-[var(--border-subtle)] rounded-lg shadow-lg max-h-60 overflow-auto"
         >
           {filtered.map((opt, i) => (
             <li
@@ -110,7 +110,7 @@ export default function Combobox({ value, onChange, options, placeholder }: Comb
               className={`px-3 py-2 cursor-pointer text-sm ${
                 i === highlight
                   ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                  : 'text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  : 'text-primary-token hover:bg-[var(--surface-inset)]'
               }`}
             >
               {opt.label}

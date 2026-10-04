@@ -50,7 +50,7 @@ export default function ToastContainer() {
               ? 'bg-emerald-600 text-white'
               : t.variant === 'error'
                 ? 'bg-red-600 text-white'
-                : 'bg-slate-800 text-white dark:bg-slate-700'
+                : 'bg-[var(--text-primary)] text-[var(--surface-card)]'
           }`}
           onClick={() => dismiss(t.id)}
         >

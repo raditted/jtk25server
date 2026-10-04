@@ -29,7 +29,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-50 transition-colors">
+      <header className="bg-[var(--surface-card)] shadow-sm sticky top-0 z-50 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2 font-bold text-xl text-indigo-600">
@@ -45,7 +45,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     location.pathname === item.path
                       ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
-                      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                      : 'text-secondary-token hover:bg-[var(--surface-inset)]'
                   }`}
                 >
                   {item.label}
@@ -57,7 +57,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ml-2 ${
                     location.pathname.startsWith('/admin')
                       ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                      : 'text-secondary-token hover:bg-[var(--surface-inset)]'
                   }`}
                 >
                   Admin
@@ -71,7 +71,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {isAuthenticated ? (
                 <button
                   onClick={logout}
-                  className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                  className="px-3 py-2 text-sm text-muted-token hover:text-red-600 dark:hover:text-red-400 transition-colors"
                 >
                   Logout
                 </button>
@@ -87,7 +87,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400"
+              className="md:hidden p-2 rounded-lg hover:bg-[var(--surface-inset)] text-secondary-token"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {mobileOpen ? (
@@ -101,7 +101,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         {mobileOpen && (
-          <div className="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <div className="md:hidden border-t border-[var(--border-subtle)] bg-[var(--surface-card)]">
             <div className="px-4 py-3 space-y-1">
               {NAV_ITEMS.map((item) => (
                 <Link
@@ -111,16 +111,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   className={`block px-3 py-2 rounded-lg text-sm font-medium ${
                     location.pathname === item.path
                       ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
-                      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                      : 'text-secondary-token hover:bg-[var(--surface-inset)]'
                   }`}
                 >
                   {item.label}
                 </Link>
               ))}
-              <hr className="my-2 border-gray-200 dark:border-gray-700" />
+              <hr className="my-2 border-[var(--border-subtle)]" />
               <div className="flex items-center gap-2 px-3 py-2">
                 <ThemeToggle onClick={toggleTheme} theme={theme} />
-                <span className="text-sm text-gray-500 dark:text-gray-400">
+                <span className="text-sm text-muted-token">
                   {theme === 'dark' ? 'Mode gelap' : 'Mode terang'}
                 </span>
               </div>
@@ -136,7 +136,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </Link>
                   <button
                     onClick={() => { logout(); setMobileOpen(false); }}
-                    className="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                    className="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-muted-token hover:bg-[var(--surface-inset)]"
                   >
                     Logout
                   </button>
@@ -159,8 +159,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-auto transition-colors">
-        <div className="max-w-7xl mx-auto px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+      <footer className="bg-[var(--surface-card)] border-t border-[var(--border-subtle)] mt-auto transition-colors">
+        <div className="max-w-7xl mx-auto px-4 py-6 text-center text-sm text-faint-token">
           JTK 25 &copy; {new Date().getFullYear()} &middot; Politeknik Negeri Bandung &middot;{' '}
           <Link to="/privacy" className="hover:underline">Kebijakan Privasi</Link>
         </div>
@@ -174,7 +174,7 @@ function ThemeToggle({ onClick, theme }: { onClick: () => void; theme: 'light' |
     <button
       onClick={onClick}
       title={theme === 'dark' ? 'Beralih ke mode terang' : 'Beralih ke mode gelap'}
-      className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+      className="p-2 rounded-lg text-muted-token hover:text-gray-700 dark:hover:text-gray-200 hover:bg-[var(--surface-inset)] transition-colors"
     >
       {theme === 'dark' ? (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -299,21 +299,21 @@ function NotificationBell() {
       </div>
 
       {permissionDenied && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 z-50">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="absolute right-0 top-full mt-2 w-64 bg-[var(--surface-raised)] border border-[var(--border-subtle)] rounded-lg shadow-lg p-3 z-50">
+          <p className="text-sm text-muted-token">
             Notifikasi diblokir oleh browser. Silakan izinkan notifikasi di pengaturan browser.
           </p>
         </div>
       )}
 
       {dropdownOpen && enabled && (
-        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 z-50">
+        <div className="absolute right-0 top-full mt-2 w-48 bg-[var(--surface-raised)] border border-[var(--border-subtle)] rounded-lg shadow-lg py-1 z-50">
           <button
             onClick={() => { selectClass(''); }}
-            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+            className={`w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-inset)] transition-colors ${
               selectedClass === ''
                 ? 'text-indigo-600 dark:text-indigo-400 font-medium'
-                : 'text-gray-700 dark:text-gray-300'
+                : 'text-primary-token'
             }`}
           >
             Global saja
@@ -322,10 +322,10 @@ function NotificationBell() {
             <button
               key={cls}
               onClick={() => { selectClass(cls); }}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-inset)] transition-colors ${
                 selectedClass === cls
                   ? 'text-indigo-600 dark:text-indigo-400 font-medium'
-                  : 'text-gray-700 dark:text-gray-300'
+                  : 'text-primary-token'
               }`}
             >
               {cls}

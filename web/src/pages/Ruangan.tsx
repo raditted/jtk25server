@@ -234,15 +234,15 @@ export default function Ruangan() {
   const physicalRooms = occupancy.filter((o) => !o.isOnline);
   const availableCount = physicalRooms.filter((o) => !o.occupied).length;
 
-  if (loading) return <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8"><div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-6 animate-pulse" /></div>;
+  if (loading) return <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8"><div className="h-8 bg-[var(--surface-inset)] rounded w-32 mb-6 animate-pulse" /></div>;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Ruangan</h1>
-        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-          <button onClick={() => setView('jadwal')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${view === 'jadwal' ? 'bg-white dark:bg-gray-700 shadow text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}>Jadwal</button>
-          <button onClick={() => setView('matriks')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${view === 'matriks' ? 'bg-white dark:bg-gray-700 shadow text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}>Matriks</button>
+        <h1 className="text-2xl font-bold text-primary-token">Ruangan</h1>
+        <div className="flex gap-1 bg-[var(--surface-inset)] rounded-lg p-1">
+          <button onClick={() => setView('jadwal')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${view === 'jadwal' ? 'bg-[var(--surface-raised)] shadow text-primary-token' : 'text-secondary-token'}`}>Jadwal</button>
+          <button onClick={() => setView('matriks')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${view === 'matriks' ? 'bg-[var(--surface-raised)] shadow text-primary-token' : 'text-secondary-token'}`}>Matriks</button>
         </div>
       </div>
 
@@ -250,7 +250,7 @@ export default function Ruangan() {
         <>
           <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
             {DAYS.map((d) => (
-              <button key={d} onClick={() => setSelectedDay(d)} className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap border transition ${selectedDay === d ? 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>{d}</button>
+              <button key={d} onClick={() => setSelectedDay(d)} className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap border transition ${selectedDay === d ? 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700' : 'bg-[var(--surface-raised)] text-secondary-token border-[var(--border-strong)] hover:bg-gray-50 dark:hover:bg-gray-700'}`}>{d}</button>
             ))}
           </div>
 
@@ -259,7 +259,7 @@ export default function Ruangan() {
             placeholder="Cari ruangan..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg mb-3 text-sm"
+            className="w-full px-3 py-2 border border-[var(--border-strong)] bg-[var(--surface-raised)] text-primary-token rounded-lg mb-3 text-sm"
           />
 
           <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg px-4 py-2 mb-3 text-sm text-indigo-700 dark:text-indigo-300 font-medium">
@@ -268,7 +268,7 @@ export default function Ruangan() {
 
           <div className="space-y-1">
             {filtered.map((o) => (
-              <div key={o.room.id} className="flex items-center gap-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 px-4 py-3">
+              <div key={o.room.id} className="flex items-center gap-3 bg-[var(--surface-card)] rounded-lg border border-[var(--border-subtle)] px-4 py-3">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                   o.isOnline ? 'bg-blue-50 dark:bg-blue-900/20' : o.occupied ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20'
                 }`}>
@@ -281,8 +281,8 @@ export default function Ruangan() {
                   )}
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">{o.room.name}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="font-medium text-primary-token text-sm">{o.room.name}</div>
+                  <div className="text-xs text-muted-token">
                     {o.isOnline
                       ? 'Sesi online — bukan ruang fisik'
                       : o.occupied
@@ -342,12 +342,12 @@ function MatrixView({ rooms, effectiveSessions, penggantiCells, filterMode, setF
   return (
     <div>
       <div className="flex items-center gap-2 mb-4">
-        <button onClick={() => setFilterMode(filterMode === 'all' ? 'available' : 'all')} className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition ${filterMode === 'available' ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700'}`}>
+        <button onClick={() => setFilterMode(filterMode === 'all' ? 'available' : 'all')} className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition ${filterMode === 'available' ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700' : 'bg-[var(--surface-raised)] text-secondary-token border-[var(--border-strong)]'}`}>
           {filterMode === 'available' ? 'Tersedia sekarang' : 'Semua'}
         </button>
       </div>
 
-      <div className="flex gap-3 text-xs text-gray-500 dark:text-gray-400 mb-3">
+      <div className="flex gap-3 text-xs text-muted-token mb-3">
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700" /> Terpakai</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700" /> Tersedia</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700" /> Pengganti</span>
@@ -363,10 +363,10 @@ function MatrixView({ rooms, effectiveSessions, penggantiCells, filterMode, setF
           if (filterMode === 'available' && (isOnline || !roomAvailable)) return null;
 
           return (
-            <div key={room.id} className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+            <div key={room.id} className="bg-[var(--surface-card)] rounded-xl shadow-sm border border-[var(--border-subtle)] overflow-hidden">
+              <div className="px-4 py-3 border-b border-[var(--border-subtle)] flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-blue-500' : roomAvailable ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{room.name}</span>
+                <span className="font-medium text-sm text-primary-token">{room.name}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                   isOnline
                     ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
@@ -379,9 +379,9 @@ function MatrixView({ rooms, effectiveSessions, penggantiCells, filterMode, setF
                 <table className="w-full text-xs min-w-[420px]">
                   <thead>
                     <tr>
-                      <th className="px-2 py-1 text-left text-gray-500 dark:text-gray-400 font-medium w-20"></th>
+                      <th className="px-2 py-1 text-left text-muted-token font-medium w-20"></th>
                       {dayLabels.map((d) => (
-                        <th key={d} className="px-2 py-1 text-center text-gray-500 dark:text-gray-400 font-medium">{d.slice(0, 3)}</th>
+                        <th key={d} className="px-2 py-1 text-center text-muted-token font-medium">{d.slice(0, 3)}</th>
                       ))}
                     </tr>
                   </thead>
@@ -390,7 +390,7 @@ function MatrixView({ rooms, effectiveSessions, penggantiCells, filterMode, setF
                       const slotStart = t.split('-')[0];
                       return (
                         <tr key={t}>
-                          <td className="px-2 py-1 text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap text-[10px]">{slotStart}</td>
+                          <td className="px-2 py-1 text-muted-token font-medium whitespace-nowrap text-[10px]">{slotStart}</td>
                           {dayLabels.map((d) => {
                             const session = isOccupied(room.ext_id, d, si);
                             const slotParsed = parseTimeMinutes(t);

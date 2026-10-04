@@ -13,6 +13,7 @@
   :root {
     --surface-page: #f8fafc;
     --surface-card: #ffffff;
+    --surface-raised: #ffffff;
     --surface-inset: #f1f5f9;
     --surface-hover: #f8fafc;
 
@@ -22,6 +23,11 @@
     --text-primary: #0f172a;
     --text-secondary: #475569;
     --text-muted: #64748b;
+    --text-faint: #94a3b8;
+    --text-on-accent: #ffffff;
+
+    --accent-primary: #4f46e5;
+    --accent-primary-hover: #4338ca;
 
     --focus-ring: #6366f1;
   }
@@ -29,6 +35,7 @@
   .dark {
     --surface-page: #020617;
     --surface-card: #0f172a;
+    --surface-raised: #1e293b;
     --surface-inset: #1e293b;
     --surface-hover: #1e293b;
 
@@ -38,6 +45,11 @@
     --text-primary: #f1f5f9;
     --text-secondary: #cbd5e1;
     --text-muted: #94a3b8;
+    --text-faint: #64748b;
+    --text-on-accent: #ffffff;
+
+    --accent-primary: #818cf8;
+    --accent-primary-hover: #6366f1;
 
     --focus-ring: #818cf8;
   }
@@ -49,6 +61,8 @@
 
   body {
     @apply antialiased transition-colors duration-200;
+    /* Driven by a token so the page follows the theme. `index.html` must NOT
+       set a light-only `bg-gray-50` on <body>, or it outranks this rule. */
     background-color: var(--surface-page);
     color: var(--text-primary);
     font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -81,6 +95,11 @@
     background-color: var(--surface-card);
   }
 
+  /* Raised surface for menus and dropdowns sitting above a card. */
+  .surface-raised {
+    background-color: var(--surface-raised);
+  }
+
   /* Inset panel used inside cards for forms and previews. */
   .panel-inset {
     @apply rounded-lg border border-[var(--border-subtle)] p-4;
@@ -90,4 +109,5 @@
   .text-primary-token { color: var(--text-primary); }
   .text-secondary-token { color: var(--text-secondary); }
   .text-muted-token { color: var(--text-muted); }
+  .text-faint-token { color: var(--text-faint); }
 }

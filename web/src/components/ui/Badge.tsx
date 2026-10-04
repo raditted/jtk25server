@@ -17,11 +17,17 @@ export type BadgeTone =
   | 'info'
   | 'online';
 
+/**
+ * Tones resolve through the semantic token layer, so a badge follows the
+ * theme instead of hardcoding a light-only palette plus a `dark:` pair.
+ */
 const TONES: Record<BadgeTone, string> = {
-  neutral: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-  primary: 'bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300',
-  success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
-  warning: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
+  neutral: 'bg-[var(--surface-inset)] text-secondary-token',
+  primary: 'bg-[var(--surface-inset)] text-[color:var(--accent-primary)]',
+  success:
+    'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  warning:
+    'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
   danger: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
   info: 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300',
   online: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',

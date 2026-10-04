@@ -102,7 +102,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
   'Kegiatan': { bg: 'bg-violet-50 dark:bg-violet-900/20', text: 'text-violet-700 dark:text-violet-300', border: 'border-l-violet-500' },
 };
 
-const DEFAULT_CATEGORY_COLOR = { bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-300', border: 'border-l-gray-400' };
+const DEFAULT_CATEGORY_COLOR = { bg: 'bg-[var(--surface-inset)]', text: 'text-primary-token', border: 'border-l-gray-400' };
 
 function getCategoryColor(category: string | null) {
   if (!category) return DEFAULT_CATEGORY_COLOR;
@@ -231,28 +231,28 @@ export default function Kalender() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex items-center justify-between mb-6">
-          <div className="h-8 bg-gray-200 dark:bg-gray-800 rounded-lg w-56 animate-pulse" />
+          <div className="h-8 bg-[var(--surface-inset)] rounded-lg w-56 animate-pulse" />
           <div className="flex gap-2">
-            <div className="h-9 w-20 bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse" />
-            <div className="h-9 w-20 bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse" />
+            <div className="h-9 w-20 bg-[var(--surface-inset)] rounded-lg animate-pulse" />
+            <div className="h-9 w-20 bg-[var(--surface-inset)] rounded-lg animate-pulse" />
           </div>
         </div>
         <div className="flex gap-2 mb-6 overflow-hidden">
           {Array.from({ length: 7 }, (_, i) => (
-            <div key={i} className="h-9 bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse flex-shrink-0"
+            <div key={i} className="h-9 bg-[var(--surface-inset)] rounded-full animate-pulse flex-shrink-0"
               style={{ width: `${60 + (i % 3) * 12}px`, animationDelay: `${i * 75}ms` }} />
           ))}
         </div>
         <div className="space-y-4">
           {Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="bg-gray-100 dark:bg-gray-800/50 rounded-xl p-4 animate-pulse"
+            <div key={i} className="bg-[var(--surface-inset)]/50 rounded-xl p-4 animate-pulse"
               style={{ animationDelay: `${i * 100}ms` }}>
               <div className="flex items-start gap-3">
-                <div className="w-1 h-12 bg-gray-300 dark:bg-gray-700 rounded-full" />
+                <div className="w-1 h-12 bg-[var(--border-strong)] rounded-full" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/4" />
+                  <div className="h-5 bg-[var(--surface-inset)] rounded w-2/3" />
+                  <div className="h-4 bg-[var(--surface-inset)] rounded w-1/3" />
+                  <div className="h-3 bg-[var(--surface-inset)] rounded w-1/4" />
                 </div>
               </div>
             </div>
@@ -265,7 +265,7 @@ export default function Kalender() {
   if (error) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Kalender Akademik</h1>
+        <h1 className="text-2xl font-bold text-primary-token mb-6">Kalender Akademik</h1>
         <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/40 rounded-xl p-8 text-center">
           <svg className="w-12 h-12 mx-auto mb-4 text-red-400 dark:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
@@ -287,8 +287,8 @@ export default function Kalender() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Kalender Akademik</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          <h1 className="text-2xl font-bold text-primary-token">Kalender Akademik</h1>
+          <p className="text-sm text-muted-token mt-0.5">
             {allItems.length} acara terjadwal
           </p>
         </div>
@@ -296,20 +296,20 @@ export default function Kalender() {
           <button
             onClick={fetchData}
             disabled={loading}
-            className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+            className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-[var(--surface-inset)] transition-colors disabled:opacity-50"
             title="Muat ulang"
           >
             <svg className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </button>
-          <div className="flex gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+          <div className="flex gap-0.5 bg-[var(--surface-inset)] rounded-lg p-0.5">
             <button
               onClick={() => setViewMode('list')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                 viewMode === 'list'
-                  ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'bg-[var(--surface-raised)] shadow-sm text-primary-token'
+                  : 'text-muted-token hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -321,8 +321,8 @@ export default function Kalender() {
               onClick={() => setViewMode('grid')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                 viewMode === 'grid'
-                  ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'bg-[var(--surface-raised)] shadow-sm text-primary-token'
+                  : 'text-muted-token hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -334,21 +334,21 @@ export default function Kalender() {
         </div>
       </div>
 
-      <div className="sticky top-16 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-white/80 dark:bg-gray-950/80 backdrop-blur-lg border-b border-gray-200/50 dark:border-gray-800/50">
+      <div className="sticky top-16 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-[color-mix(in_srgb,var(--surface-card)_80%,transparent)] backdrop-blur-lg border-b border-[var(--border-subtle)]">
         <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-none">
           <button
             onClick={() => setSelectedClass(null)}
             className={`relative flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
               selectedClass === null
                 ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 dark:shadow-indigo-500/10'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                : 'bg-[var(--surface-inset)] text-secondary-token hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
           >
             Semua
             <span className={`text-xs px-1.5 py-0.5 rounded-full ${
               selectedClass === null
                 ? 'bg-indigo-500/30 text-indigo-100'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                : 'bg-[var(--surface-inset)] text-muted-token'
             }`}>
               {totalUnfiltered}
             </span>
@@ -363,7 +363,7 @@ export default function Kalender() {
                 className={`relative flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
                   isActive
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 dark:shadow-indigo-500/10'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'bg-[var(--surface-inset)] text-secondary-token hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
                 {code}
@@ -371,7 +371,7 @@ export default function Kalender() {
                   <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                     isActive
                       ? 'bg-indigo-500/30 text-indigo-100'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                      : 'bg-[var(--surface-inset)] text-muted-token'
                   }`}>
                     {count}
                   </span>
@@ -394,15 +394,15 @@ export default function Kalender() {
           />
         ) : (
           <>
-            <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 mb-4">
+            <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface-card)] rounded-xl shadow-sm border border-[var(--border-subtle)] mb-4">
               <button
                 onClick={() => setCurrentMonth(new Date(year, month - 1))}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-400 transition-colors"
+                className="p-2 hover:bg-[var(--surface-inset)] rounded-lg text-muted-token transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
               </button>
               <div className="flex items-center gap-3">
-                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{MONTH_NAMES[month]} {year}</span>
+                <span className="text-lg font-bold text-primary-token">{MONTH_NAMES[month]} {year}</span>
                 <button
                   onClick={() => {
                     setCurrentMonth(new Date(today.getFullYear(), today.getMonth()));
@@ -415,7 +415,7 @@ export default function Kalender() {
               </div>
               <button
                 onClick={() => setCurrentMonth(new Date(year, month + 1))}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-400 transition-colors"
+                className="p-2 hover:bg-[var(--surface-inset)] rounded-lg text-muted-token transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </button>
@@ -423,18 +423,18 @@ export default function Kalender() {
 
             <div className="grid grid-cols-7 mb-2">
               {WEEKDAYS.map((d) => (
-                <div key={d} className="py-2 text-center text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{d}</div>
+                <div key={d} className="py-2 text-center text-xs font-semibold text-faint-token uppercase tracking-wider">{d}</div>
               ))}
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+            <div className="bg-[var(--surface-card)] rounded-xl shadow-sm border border-[var(--border-subtle)] overflow-hidden">
               {Array.from({ length: rows }, (_, row) => (
-                <div key={row} className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
+                <div key={row} className="grid grid-cols-7 border-b border-[var(--border-subtle)] last:border-b-0">
                   {Array.from({ length: 7 }, (_, col) => {
                     const cellIndex = row * 7 + col;
                     const dayNum = cellIndex - startWeekday + 1;
                     if (dayNum < 1 || dayNum > daysInMonth) {
-                      return <div key={col} className="min-h-[80px] sm:min-h-[96px] border-r border-gray-100 dark:border-gray-800 last:border-r-0" />;
+                      return <div key={col} className="min-h-[80px] sm:min-h-[96px] border-r border-[var(--border-subtle)] last:border-r-0" />;
                     }
 
                     const date = new Date(year, month, dayNum);
@@ -450,12 +450,12 @@ export default function Kalender() {
                       <button
                         key={col}
                         onClick={() => setSelectedDate(date)}
-                        className={`relative min-h-[80px] sm:min-h-[96px] p-2 text-left border-r border-gray-100 dark:border-gray-800 last:border-r-0 transition-colors duration-150 ${
+                        className={`relative min-h-[80px] sm:min-h-[96px] p-2 text-left border-r border-[var(--border-subtle)] last:border-r-0 transition-colors duration-150 ${
                           isSelected
                             ? 'bg-indigo-50/80 dark:bg-indigo-900/20'
                             : hasItems
                               ? 'hover:bg-gray-50 dark:hover:bg-gray-800/40 cursor-pointer'
-                              : 'hover:bg-gray-50/50 dark:hover:bg-gray-800/20'
+                              : 'hover:bg-[var(--surface-inset)]/50 dark:hover:bg-gray-800/20'
                         }`}
                       >
                         <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm ${
@@ -463,7 +463,7 @@ export default function Kalender() {
                             ? 'bg-indigo-600 text-white font-bold shadow-sm shadow-indigo-600/30'
                             : isSelected
                               ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold'
-                              : 'text-gray-700 dark:text-gray-300'
+                              : 'text-primary-token'
                         }`}>
                           {dayNum}
                         </span>
@@ -473,19 +473,19 @@ export default function Kalender() {
                             {hasPengganti && (
                               <div className="flex items-center gap-1">
                                 <div className="w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0" />
-                                <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">Pengganti</span>
+                                <span className="text-[10px] text-muted-token truncate">Pengganti</span>
                               </div>
                             )}
                             {eventCount > 0 && (
                               <div className="flex items-center gap-1">
                                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0" />
-                                <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                                <span className="text-[10px] text-muted-token truncate">
                                   {eventCount} acara
                                 </span>
                               </div>
                             )}
                             {items!.length > 3 && (
-                              <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">+{items!.length - 3}</span>
+                              <span className="text-[10px] text-faint-token font-medium">+{items!.length - 3}</span>
                             )}
                           </div>
                         )}
@@ -498,15 +498,15 @@ export default function Kalender() {
 
             <div className="mt-4">
               {selectedDate === null ? (
-                <div className="text-center py-12 text-gray-400 dark:text-gray-500">
-                  <svg className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="text-center py-12 text-faint-token">
+                  <svg className="w-10 h-10 mx-auto mb-3 text-faint-token" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <p className="text-sm">Pilih tanggal untuk melihat acara</p>
                 </div>
               ) : !selectedItems || selectedItems.length === 0 ? (
-                <div className="text-center py-12 text-gray-400 dark:text-gray-500">
-                  <svg className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="text-center py-12 text-faint-token">
+                  <svg className="w-10 h-10 mx-auto mb-3 text-faint-token" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 12H4" />
                   </svg>
                   <p className="text-sm">
@@ -515,7 +515,7 @@ export default function Kalender() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  <p className="text-sm font-medium text-muted-token">
                     {selectedItems.length} acara pada {selectedDate.getDate()} {MONTH_NAMES[selectedDate.getMonth()]}
                   </p>
                   {selectedItems.map((item, i) => renderCalendarItem(item, i))}
@@ -537,11 +537,11 @@ function ListView({ monthGroups, today, onJumpToMonth }: {
   if (monthGroups.length === 0) {
     return (
       <div className="text-center py-16">
-        <svg className="w-14 h-14 mx-auto mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-14 h-14 mx-auto mb-4 text-faint-token" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
         </svg>
-        <p className="text-gray-500 dark:text-gray-400 font-medium">Tidak ada acara</p>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Tidak ada acara yang cocok dengan filter yang dipilih</p>
+        <p className="text-muted-token font-medium">Tidak ada acara</p>
+        <p className="text-sm text-faint-token mt-1">Tidak ada acara yang cocok dengan filter yang dipilih</p>
       </div>
     );
   }
@@ -557,14 +557,14 @@ function ListView({ monthGroups, today, onJumpToMonth }: {
           <div key={`${group.year}-${group.month}`}>
             <div className="flex items-center gap-3 mb-4">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{group.label}</h2>
+                <h2 className="text-lg font-bold text-primary-token">{group.label}</h2>
                 {isCurrentMonth && (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
                     Bulan ini
                   </span>
                 )}
               </div>
-              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+              <div className="flex-1 h-px bg-[var(--surface-inset)]" />
               <button
                 onClick={() => onJumpToMonth(group.year, group.month)}
                 className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium transition-colors"
@@ -574,7 +574,7 @@ function ListView({ monthGroups, today, onJumpToMonth }: {
             </div>
 
             <div className="relative ml-4">
-              <div className="absolute left-0 top-2 bottom-2 w-px bg-gray-200 dark:bg-gray-700" />
+              <div className="absolute left-0 top-2 bottom-2 w-px bg-[var(--surface-inset)]" />
 
               <div className="space-y-1">
                 {group.items.map((item, i) => {
@@ -592,13 +592,13 @@ function ListView({ monthGroups, today, onJumpToMonth }: {
 
                   return (
                     <div key={`${itemKey(item)}-${i}`} className="relative pl-6">
-                      <div className={`absolute left-0 top-4 w-2.5 h-2.5 -translate-x-[4.5px] rounded-full border-2 border-white dark:border-gray-950 z-10 ${
+                      <div className={`absolute left-0 top-4 w-2.5 h-2.5 -translate-x-[4.5px] rounded-full border-2 border-[var(--surface-page)] z-10 ${
                         isTodayItem
                           ? 'bg-indigo-600 ring-2 ring-indigo-600/20'
                           : item.type === 'pengganti'
                             ? 'bg-orange-500'
                             : isPast
-                              ? 'bg-gray-300 dark:bg-gray-600'
+                              ? 'bg-[var(--border-strong)]'
                               : 'bg-indigo-400 dark:bg-indigo-500'
                       }`} />
 
@@ -607,11 +607,11 @@ function ListView({ monthGroups, today, onJumpToMonth }: {
                           <span className={`text-xs font-semibold ${
                             isTodayItem
                               ? 'text-indigo-600 dark:text-indigo-400'
-                              : 'text-gray-400 dark:text-gray-500'
+                              : 'text-faint-token'
                           }`}>
                             {isTodayItem ? 'Hari ini' : formatDateID(itemDate)}
                           </span>
-                          <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
+                          <div className="flex-1 h-px bg-[var(--surface-inset)]" />
                         </div>
                       )}
 
@@ -667,8 +667,8 @@ function renderPengganti(pg: Pengganti, index: number, isPast: boolean) {
     },
     info: {
       label: 'Info',
-      bg: 'bg-gray-50 dark:bg-gray-800/50',
-      text: 'text-gray-700 dark:text-gray-300',
+      bg: 'bg-[var(--surface-inset)]/50',
+      text: 'text-primary-token',
       border: 'border-l-gray-400',
       dot: 'bg-gray-400',
     },
@@ -679,7 +679,7 @@ function renderPengganti(pg: Pengganti, index: number, isPast: boolean) {
   return (
     <div
       key={`pg-${pg.id}-${index}`}
-      className={`bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 border-l-4 ${kind.border} overflow-hidden transition-shadow hover:shadow-md`}
+      className={`bg-[var(--surface-card)] rounded-xl shadow-sm border border-[var(--border-subtle)] border-l-4 ${kind.border} overflow-hidden transition-shadow hover:shadow-md`}
     >
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
@@ -688,43 +688,43 @@ function renderPengganti(pg: Pengganti, index: number, isPast: boolean) {
               <span className={`w-1.5 h-1.5 rounded-full ${kind.dot}`} />
               {kind.label}
             </span>
-            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{pg.class_code}</span>
+            <span className="text-sm font-bold text-primary-token">{pg.class_code}</span>
             {isPast && (
-              <span className="text-[10px] text-gray-400 dark:text-gray-500 italic">sudah lewat</span>
+              <span className="text-[10px] text-faint-token italic">sudah lewat</span>
             )}
           </div>
           <div className="text-right flex-shrink-0">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <p className="text-sm font-medium text-primary-token">
               {formatDateID(parseLocalDate(pg.date))}
             </p>
           </div>
         </div>
 
         {pg.note && (
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 leading-relaxed">{pg.note}</p>
+          <p className="text-sm text-secondary-token mt-2 leading-relaxed">{pg.note}</p>
         )}
 
         {pg.sessions.length > 0 && (
-          <div className="mt-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-            <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+          <div className="mt-3 bg-[var(--surface-inset)]/50 rounded-lg p-3">
+            <p className="text-[10px] font-semibold text-faint-token uppercase tracking-wider mb-2">
               {pg.sessions.length} Sesi Jadwal
             </p>
             <div className="space-y-1.5">
               {pg.sessions.map((s, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm">
-                  <span className="font-mono text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                  <span className="font-mono text-xs font-semibold text-muted-token bg-[var(--surface-inset)] px-1.5 py-0.5 rounded">
                     {s.time}
                   </span>
-                  <span className="text-gray-700 dark:text-gray-300">{s.course_name}</span>
-                  <span className="text-gray-400 dark:text-gray-500">&middot;</span>
-                  <span className="text-gray-500 dark:text-gray-400 text-xs">{s.lecturer}</span>
-                  <span className="text-gray-400 dark:text-gray-500">&middot;</span>
-                  <span className="text-gray-500 dark:text-gray-400 text-xs">{s.room}</span>
+                  <span className="text-primary-token">{s.course_name}</span>
+                  <span className="text-faint-token">&middot;</span>
+                  <span className="text-muted-token text-xs">{s.lecturer}</span>
+                  <span className="text-faint-token">&middot;</span>
+                  <span className="text-muted-token text-xs">{s.room}</span>
                   {s.mode && (
                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
                       s.mode === 'online'
                         ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                        : 'bg-[var(--surface-inset)] text-secondary-token'
                     }`}>
                       {s.mode}
                     </span>
@@ -746,24 +746,24 @@ function renderEvent(event: CalendarEvent, index: number, isPast: boolean) {
   return (
     <div
       key={`ev-${event.id}-${index}`}
-      className={`bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 border-l-4 ${catColor.border} overflow-hidden transition-shadow hover:shadow-md`}
+      className={`bg-[var(--surface-card)] rounded-xl shadow-sm border border-[var(--border-subtle)] border-l-4 ${catColor.border} overflow-hidden transition-shadow hover:shadow-md`}
     >
       <div className="p-4">
         <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-gray-50 dark:bg-gray-800 flex flex-col items-center justify-center border border-gray-100 dark:border-gray-700">
-            <span className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-none">
+          <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[var(--surface-inset)] flex flex-col items-center justify-center border border-[var(--border-subtle)]">
+            <span className="text-lg font-bold text-primary-token leading-none">
               {parseLocalDate(event.date).getDate()}
             </span>
-            <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase">
+            <span className="text-[10px] font-semibold text-faint-token uppercase">
               {MONTH_NAMES[parseLocalDate(event.date).getMonth()].slice(0, 3)}
             </span>
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-bold text-gray-900 dark:text-gray-100 leading-snug">{event.title}</h3>
+              <h3 className="font-bold text-primary-token leading-snug">{event.title}</h3>
               {isPast && (
-                <span className="text-[10px] text-gray-400 dark:text-gray-500 italic">sudah lewat</span>
+                <span className="text-[10px] text-faint-token italic">sudah lewat</span>
               )}
             </div>
 
@@ -774,7 +774,7 @@ function renderEvent(event: CalendarEvent, index: number, isPast: boolean) {
                 </span>
               )}
 
-              <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+              <span className="flex items-center gap-1 text-xs text-muted-token">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -789,7 +789,7 @@ function renderEvent(event: CalendarEvent, index: number, isPast: boolean) {
             </div>
 
             {event.location && (
-              <p className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mt-2">
+              <p className="flex items-center gap-1.5 text-sm text-muted-token mt-2">
                 <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -799,7 +799,7 @@ function renderEvent(event: CalendarEvent, index: number, isPast: boolean) {
             )}
 
             {event.collection_time && (
-              <p className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mt-1.5">
+              <p className="flex items-center gap-1.5 text-sm text-muted-token mt-1.5">
                 <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -808,7 +808,7 @@ function renderEvent(event: CalendarEvent, index: number, isPast: boolean) {
             )}
 
             {event.description && (
-              <div className="prose prose-sm max-w-none text-gray-600 dark:text-gray-400 mt-2">
+              <div className="prose prose-sm max-w-none text-secondary-token mt-2">
                 <Markdown>{event.description}</Markdown>
               </div>
             )}
