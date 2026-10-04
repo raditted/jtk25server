@@ -1,178 +1,182 @@
-import { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '../../api';
 import type { Room } from '../../types';
+import type { BadgeTone } from '../../components/ui/Badge';
+import { PageHeader } from '../../components/AdminLayout';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import DataTable, { type Column } from '../../components/ui/DataTable';
+import { SelectField, TextField } from '../../components/ui/Field';
 import Modal from '../../components/Modal';
-import { showToast } from '../../components/Toast';
-import { required, validate, FieldError, hasError } from '../../lib/validation';
+import { useCrud } from '../../components/ui/useCrud';
 
-const EMPTY: { name: string; type: 'kelas' | 'lab' } = { name: '', type: 'kelas' };
+type RoomForm = { name: string; type: Room['type'] };
+
+const EMPTY: RoomForm = { name: '', type: 'kelas' };
+
+const TYPE_LABELS: Record<Room['type'], string> = {
+  kelas: 'Ruang Kelas',
+  lab: 'Laboratorium',
+  online: 'Online',
+};
+
+const TYPE_TONES: Record<Room['type'], BadgeTone> = {
+  kelas: 'success',
+  lab: 'primary',
+  online: 'info',
+};
 
 export default function AdminRuangan() {
-  const [data, setData] = useState<Room[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Room | null>(null);
-  const [form, setForm] = useState(EMPTY);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
+  const crud = useCrud<Room, RoomForm>({
+    listPath: '/admin/rooms',
+    createPath: '/admin/rooms',
+    updatePath: (row) => `/admin/rooms/${row.id}`,
+    deletePath: (row) => `/admin/rooms/${row.id}`,
+    emptyForm: EMPTY,
+    toForm: (row) => ({ name: row.name, type: row.type }),
+    toCreateBody: (form) => ({ name: form.name.trim(), type: form.type }),
+    toUpdateBody: (form) => ({ name: form.name.trim(), type: form.type }),
+    validate: (form) => ({
+      name: form.name.trim() ? null : 'Nama ruangan wajib diisi',
+    }),
+    describe: (row) => row.name,
+    noun: 'ruangan',
+  });
 
-  const load = useCallback(async () => {
-    try {
-      const res = await apiClient.get<Room[]>('/admin/rooms');
-      setData(res);
-    } catch {
-      setError('Gagal memuat data');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const columns: Column<Room>[] = [
+    {
+      key: 'name',
+      header: 'Nama',
+      render: (row) => (
+        <div>
+          <p className="font-medium">{row.name}</p>
+          <p className="mt-0.5 text-xs text-muted-token">{row.ext_id}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'type',
+      header: 'Tipe',
+      render: (row) => <Badge tone={TYPE_TONES[row.type]}>{TYPE_LABELS[row.type]}</Badge>,
+    },
+    {
+      key: 'actions',
+      header: 'Aksi',
+      align: 'right',
+      render: (row) => (
+        <div className="flex justify-end gap-1">
+          <Button size="sm" variant="ghost" onClick={() => crud.openEdit(row)}>
+            Edit
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => crud.setDeleting(row)}>
+            <span className="text-red-600 dark:text-red-400">Hapus</span>
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
-  useEffect(() => { load(); }, [load]);
-
-  function openAdd() {
-    setEditing(null);
-    setForm(EMPTY);
-    setFieldErrors({});
-    setModalOpen(true);
-  }
-
-  function openEdit(r: Room) {
-    setEditing(r);
-    setForm({ name: r.name, type: r.type });
-    setFieldErrors({});
-    setModalOpen(true);
-  }
-
-  function validateForm(): boolean {
-    const errors: Record<string, string | null> = {
-      name: validate(form.name, 'Nama ruangan', required),
-    };
-    setFieldErrors(errors);
-    return !Object.values(errors).some(hasError);
-  }
-
-  async function handleSave() {
-    if (!validateForm()) return;
-    setSaving(true);
-    setError('');
-    try {
-      const payload = { name: form.name.trim(), type: form.type };
-      if (editing) {
-        await apiClient.put(`/admin/rooms/${editing.id}`, payload);
-      } else {
-        await apiClient.post('/admin/rooms', payload);
-      }
-      setModalOpen(false);
-      showToast(editing ? 'Ruangan berhasil diperbarui' : 'Ruangan berhasil ditambahkan', 'success');
-      load();
-    } catch (e: any) {
-      setError(e.body?.error || 'Gagal menyimpan');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDelete() {
-    if (!deleteId) return;
-    try {
-      await apiClient.delete(`/admin/rooms/${deleteId}`);
-      setDeleteId(null);
-      showToast('Ruangan berhasil dihapus', 'success');
-      load();
-    } catch (e: any) {
-      setError(e.body?.error || 'Gagal menghapus');
-    }
-  }
-
-  if (loading) return <div className="p-8 text-center text-gray-400 dark:text-gray-500">Memuat...</div>;
+  const onlineCount = crud.rows.filter((r) => r.type === 'online').length;
+  const physicalCount = crud.rows.length - onlineCount;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Kelola Ruangan</h1>
-        <button onClick={openAdd} className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">
-          + Tambah Ruangan
-        </button>
+    <>
+      <PageHeader
+        title="Kelola Ruangan"
+        description={`${physicalCount} ruangan fisik${onlineCount > 0 ? ` · ${onlineCount} ruang online` : ''}. Ruangan online tidak dipakai untuk occupy maupun ketersediaan.`}
+        actions={
+          <Button variant="primary" onClick={crud.openAdd} icon={<PlusIcon />}>
+            Tambah Ruangan
+          </Button>
+        }
+      />
+
+      <div className="card overflow-hidden">
+        <DataTable
+          columns={columns}
+          rows={crud.rows}
+          rowKey={(row) => row.id}
+          loading={crud.loading}
+          error={crud.loadError}
+          onRetry={crud.reload}
+          emptyTitle="Belum ada ruangan"
+          emptyDescription="Tambahkan ruangan fisik atau ruang online untuk sesi jarak jauh."
+          emptyAction={
+            <Button variant="primary" onClick={crud.openAdd}>
+              Tambah Ruangan
+            </Button>
+          }
+        />
       </div>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg flex items-center justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError('')} className="ml-2 text-red-400 hover:text-red-600 dark:hover:text-red-300">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
+      <Modal
+        open={crud.modalOpen}
+        onClose={crud.closeModal}
+        title={crud.editing ? 'Edit Ruangan' : 'Tambah Ruangan'}
+        footer={
+          <>
+            <Button onClick={crud.closeModal} disabled={crud.saving}>
+              Batal
+            </Button>
+            <Button variant="primary" onClick={crud.save} loading={crud.saving}>
+              Simpan
+            </Button>
+          </>
+        }
+      >
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void crud.save();
+          }}
+        >
+          <TextField
+            label="Nama"
+            required
+            hideLabel={false}
+            value={crud.form.name}
+            onChange={(e) => crud.setField('name', e.target.value)}
+            error={crud.fieldErrors.name}
+            placeholder="D108 Kelas"
+          />
 
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Nama</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Tipe</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((r) => (
-                <tr key={r.id} className="border-b border-gray-200 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{r.name}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${
-                      r.type === 'lab' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                    }`}>
-                      {r.type === 'lab' ? 'Laboratorium' : 'Ruang Kelas'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button onClick={() => openEdit(r)} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mr-2">Edit</button>
-                    <button onClick={() => setDeleteId(r.id)} className="text-xs text-red-600 dark:text-red-400 hover:underline">Hapus</button>
-                  </td>
-                </tr>
-              ))}
-              {data.length === 0 && (
-                <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">Tidak ada data</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          <SelectField
+            label="Tipe"
+            required
+            value={crud.form.type}
+            onChange={(e) => crud.setField('type', e.target.value as Room['type'])}
+            hint="Pilih Online untuk sesi jarak jauh yang tidak memakai ruangan fisik."
+          >
+            <option value="kelas">Ruang Kelas</option>
+            <option value="lab">Laboratorium</option>
+            <option value="online">Online</option>
+          </SelectField>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Ruangan' : 'Tambah Ruangan'}>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama *</label>
-            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg" placeholder="R.201" />
-            <FieldError error={fieldErrors.name} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipe *</label>
-            <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as 'kelas' | 'lab' })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg">
-              <option value="kelas">Ruang Kelas</option>
-              <option value="lab">Laboratorium</option>
-            </select>
-          </div>
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button onClick={() => setModalOpen(false)} className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-sm">Batal</button>
-            <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50">
-              {saving ? 'Menyimpan...' : 'Simpan'}
-            </button>
-          </div>
-        </div>
+          {crud.saveError && (
+            <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+              {crud.saveError}
+            </p>
+          )}
+        </form>
       </Modal>
 
-      <Modal open={deleteId !== null} onClose={() => setDeleteId(null)} title="Hapus Ruangan">
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Yakin ingin menghapus ruangan ini?</p>
-        <div className="flex justify-end gap-3">
-          <button onClick={() => setDeleteId(null)} className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-sm">Batal</button>
-          <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Hapus</button>
-        </div>
-      </Modal>
-    </div>
+      <ConfirmDialog
+        open={crud.deleting !== null}
+        title="Hapus Ruangan"
+        subject={crud.deleting?.name}
+        message="Ruangan akan dihapus dari daftar. Jadwal yang sudah memakai ruangan ini tidak ikut terhapus, tetapi ruang tersebut tidak lagi bisa dipilih."
+        onConfirm={crud.confirmDelete}
+        onCancel={() => crud.setDeleting(null)}
+        loading={crud.deletePending}
+      />
+    </>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" d="M12 5v14M5 12h14" />
+    </svg>
   );
 }

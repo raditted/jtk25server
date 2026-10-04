@@ -30,6 +30,7 @@ export interface PenggantiSession {
   course_code: string;
   course_name: string;
   type: string;
+  lecturer_code: string;
   lecturer: string;
   room: string;
   mode?: 'offline' | 'online';
@@ -78,7 +79,7 @@ export interface Room {
   id: number;
   ext_id: string;
   name: string;
-  type: 'kelas' | 'lab';
+  type: 'kelas' | 'lab' | 'online';
 }
 
 export interface AuthResult {
@@ -88,9 +89,11 @@ export interface AuthResult {
 
 export type AdminScope = 'global' | `class:${string}`;
 
+/** Mirrors CLASS_LIST in server/src/admin.ts. */
 export const CLASS_LIST = [
-  'D3-2A', 'D3-2B',
-  'D4-2A', 'D4-2B', 'D4-2C', 'D4-2D',
+  'D3-1A', 'D3-1B', 'D3-2A', 'D3-2B', 'D3-3A', 'D3-3B', 'D3-3C',
+  'D4-1A', 'D4-1B', 'D4-1C', 'D4-1D', 'D4-2A', 'D4-2B', 'D4-2C', 'D4-2D',
+  'D4-3A', 'D4-3B', 'D4-4A', 'D4-4B',
 ] as const;
 
 export const DAYS = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT'] as const;

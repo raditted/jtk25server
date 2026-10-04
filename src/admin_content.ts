@@ -516,7 +516,7 @@ adminContent.post("/rooms", async (c) => {
   if (auth.scope !== "global") return jsonError(c, 403, "Global access required");
 
   const body = await c.req.json<{
-    ext_id?: string; name: string; type: "kelas" | "lab";
+    ext_id?: string; name: string; type: "kelas" | "lab" | "online";
   }>();
 
   if (!body.name || !body.type) {
@@ -545,7 +545,7 @@ adminContent.put("/rooms/:id", async (c) => {
   if (!existing) return jsonError(c, 404, "Room not found");
 
   const body = await c.req.json<{
-    ext_id?: string; name?: string; type?: "kelas" | "lab";
+    ext_id?: string; name?: string; type?: "kelas" | "lab" | "online";
   }>();
 
   const success = await updateRoom(c.env.jtk25_schedules, id, {

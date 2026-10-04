@@ -43,8 +43,8 @@
         },
         "type": {
           "type": "string",
-          "enum": ["kelas", "lab"],
-          "description": "Room type: kelas (classroom) or lab (laboratory)"
+          "enum": ["kelas", "lab", "online"],
+          "description": "Room type: kelas (classroom), lab (laboratory), or online (virtual room for remote sessions)"
         }
       },
       "additionalProperties": false

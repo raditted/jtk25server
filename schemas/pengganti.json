@@ -76,6 +76,11 @@
         "room": {
           "type": "string",
           "minLength": 1
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["offline", "online"],
+          "description": "Session delivery mode. 'online' for remote sessions"
         }
       },
       "additionalProperties": false

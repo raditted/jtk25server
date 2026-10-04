@@ -1,21 +1,40 @@
-import { useState, useEffect, useCallback } from 'react';
-import Markdown from 'react-markdown';
-import { apiClient } from '../../api';
+import { useState } from 'react';
 import type { CalendarEvent } from '../../types';
 import { CLASS_LIST } from '../../types';
-import Modal from '../../components/Modal';
-import Combobox from '../../components/Combobox';
-import { showToast } from '../../components/Toast';
-import { required, validate, FieldError, hasError } from '../../lib/validation';
+import { apiClient } from '../../api';
+import { PageHeader } from '../../components/AdminLayout';
 import NotifyPrompt from '../../components/NotifyPrompt';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import DataTable, { type Column } from '../../components/ui/DataTable';
+import { SelectField, TextAreaField, TextField } from '../../components/ui/Field';
+import Modal from '../../components/Modal';
+import { showToast } from '../../components/Toast';
+import { useCrud } from '../../components/ui/useCrud';
 import { useAuth } from '../../contexts/AuthContext';
 
-const EMPTY = { title: '', description: '', date: '', end_date: '', location: '', category: '', class_name: '', collection_time: '' };
+type Form = {
+  title: string;
+  description: string;
+  date: string;
+  end_date: string;
+  location: string;
+  category: string;
+  class_name: string;
+  collection_time: string;
+};
 
-const CLASS_OPTIONS = [
-  { value: '', label: 'Semua / Global' },
-  ...CLASS_LIST.map((c) => ({ value: c, label: c.replace(/_/g, '-') })),
-];
+const EMPTY: Form = {
+  title: '',
+  description: '',
+  date: '',
+  end_date: '',
+  location: '',
+  category: '',
+  class_name: '',
+  collection_time: '',
+};
 
 const MONTHS_ID = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
@@ -24,273 +43,322 @@ function formatDateID(dateStr: string): string {
   if (parts.length < 3) return dateStr;
   const day = parseInt(parts[2], 10);
   const month = parseInt(parts[1], 10);
-  const year = parts[0];
   if (isNaN(day) || isNaN(month) || month < 1 || month > 12) return dateStr;
-  return `${day} ${MONTHS_ID[month - 1]} ${year}`;
+  return `${day} ${MONTHS_ID[month - 1]} ${parts[0]}`;
 }
 
 export default function AdminKalender() {
   const { scope, isGlobal } = useAuth();
-  const [data, setData] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<CalendarEvent | null>(null);
-  const [form, setForm] = useState(EMPTY);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
-  const [notifyPromptClass, setNotifyPromptClass] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [notifyClass, setNotifyClass] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState<CalendarEvent | null>(null);
+  const [archivePending, setArchivePending] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await apiClient.get<CalendarEvent[]>('/admin/events');
-      setData(res);
-    } catch {
-      setError('Gagal memuat data');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  function openAdd() {
-    setEditing(null);
-    setForm({ ...EMPTY, class_name: isGlobal ? '' : (scope?.replace('class:', '') ?? '') });
-    setFieldErrors({});
-    setModalOpen(true);
-  }
-
-  function openEdit(e: CalendarEvent) {
-    setEditing(e);
-    setForm({
-      title: e.title,
-      description: e.description || '',
-      date: e.date,
-      end_date: e.end_date,
-      location: e.location || '',
-      category: e.category || '',
-      class_name: e.class_name || '',
-      collection_time: e.collection_time || '',
-    });
-    setFieldErrors({});
-    setModalOpen(true);
-  }
-
-  function validateForm(): boolean {
-    const errors: Record<string, string | null> = {
-      title: validate(form.title, 'Judul', required),
-      date: validate(form.date, 'Tanggal tenggat', required),
-      end_date: validate(form.end_date, 'Tanggal akhir', required),
-    };
-    setFieldErrors(errors);
-    return !Object.values(errors).some(hasError);
-  }
+  const crud = useCrud<CalendarEvent, Form>({
+    listPath: '/admin/events',
+    createPath: '/admin/events',
+    updatePath: (row) => `/admin/events/${row.id}`,
+    deletePath: (row) => `/admin/events/${row.id}`,
+    emptyForm: EMPTY,
+    toForm: (row) => ({
+      title: row.title,
+      description: row.description ?? '',
+      date: row.date,
+      end_date: row.end_date,
+      location: row.location ?? '',
+      category: row.category ?? '',
+      class_name: row.class_name ?? '',
+      collection_time: row.collection_time ?? '',
+    }),
+    toCreateBody: (form) => form,
+    toUpdateBody: (form) => form,
+    validate: (form) => ({
+      title: form.title.trim() ? null : 'Judul wajib diisi',
+      date: form.date ? null : 'Tanggal mulai wajib diisi',
+      end_date: form.end_date ? null : 'Tanggal akhir wajib diisi',
+    }),
+    describe: (row) => row.title,
+    noun: 'tugas',
+  });
 
   async function handleSave() {
-    if (!validateForm()) return;
-    setSaving(true);
-    setError('');
+    // Class-scoped admins are pinned to their own class.
+    const ok = await crud.save();
+    if (ok) setNotifyClass(crud.editing?.class_name ?? crud.form.class_name);
+  }
+
+  async function confirmArchive() {
+    if (!archiving) return;
+    const wasArchived = archiving.is_archived === 1;
+    setArchivePending(true);
     try {
-      if (editing) {
-        await apiClient.put(`/admin/events/${editing.id}`, form);
-      } else {
-        await apiClient.post('/admin/events', form);
-      }
-      setModalOpen(false);
-      showToast(editing ? 'Tugas berhasil diperbarui' : 'Tugas berhasil ditambahkan', 'success');
-      load();
-      setNotifyPromptClass(form.class_name);
-    } catch (e: any) {
-      setError(e.body?.error || 'Gagal menyimpan');
+      await apiClient.post(`/admin/events/${archiving.id}/archive`, { archived: !wasArchived });
+      showToast(wasArchived ? 'Tugas dipulihkan' : 'Tugas diarsipkan', 'success');
+      setArchiving(null);
+      await crud.reload();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Gagal mengubah status arsip', 'error');
     } finally {
-      setSaving(false);
+      setArchivePending(false);
     }
   }
 
-  async function handleDelete() {
-    if (!deleteId) return;
-    try {
-      await apiClient.delete(`/admin/events/${deleteId}`);
-      setDeleteId(null);
-      showToast('Tugas berhasil dihapus', 'success');
-      load();
-    } catch (e: any) {
-      setError(e.body?.error || 'Gagal menghapus');
-    }
-  }
+  const rows = crud.rows.filter((e) => (showArchived ? e.is_archived === 1 : e.is_archived === 0));
 
-  async function handleArchive(id: number, archived: boolean) {
-    try {
-      await apiClient.post(`/admin/events/${id}/archive`, { archived });
-      showToast(archived ? 'Tugas diarsipkan' : 'Tugas dipulihkan', 'success');
-      load();
-    } catch (e: any) {
-      setError(e.body?.error || 'Gagal mengubah status arsip');
-    }
-  }
-
-  const filteredData = showArchived
-    ? data.filter((e) => e.is_archived === 1)
-    : data.filter((e) => e.is_archived === 0);
-
-  if (loading) return <div className="p-8 text-center text-gray-400 dark:text-gray-500">Memuat...</div>;
+  const columns: Column<CalendarEvent>[] = [
+    {
+      key: 'title',
+      header: 'Judul',
+      render: (row) => (
+        <div className="min-w-[200px]">
+          <p className="font-medium">{row.title}</p>
+          {row.collection_time && (
+            <p className="mt-0.5 text-xs text-muted-token">Dikumpulkan {row.collection_time}</p>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'date',
+      header: 'Tanggal',
+      render: (row) => (
+        <span className="whitespace-nowrap text-secondary-token">
+          {formatDateID(row.date)}
+          {row.end_date && row.end_date !== row.date ? ` – ${formatDateID(row.end_date)}` : ''}
+        </span>
+      ),
+    },
+    {
+      key: 'class',
+      header: 'Kelas',
+      render: (row) =>
+        row.class_name ? (
+          <Badge tone="primary">{row.class_name.replace(/_/g, '-')}</Badge>
+        ) : (
+          <span className="text-muted-token">Semua</span>
+        ),
+    },
+    {
+      key: 'location',
+      header: 'Lokasi',
+      render: (row) => <span className="text-secondary-token">{row.location || '—'}</span>,
+    },
+    {
+      key: 'category',
+      header: 'Kategori',
+      render: (row) => (row.category ? <Badge tone="neutral">{row.category}</Badge> : <span className="text-muted-token">—</span>),
+    },
+    {
+      key: 'actions',
+      header: 'Aksi',
+      align: 'right',
+      render: (row) => (
+        <div className="flex flex-wrap justify-end gap-1">
+          <Button size="sm" variant="ghost" onClick={() => crud.openEdit(row)}>
+            Edit
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setArchiving(row)}
+          >
+            <span className={row.is_archived === 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}>
+              {row.is_archived === 0 ? 'Arsipkan' : 'Pulihkan'}
+            </span>
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => crud.setDeleting(row)}>
+            <span className="text-red-600 dark:text-red-400">Hapus</span>
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Kelola Tugas</h1>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowArchived(!showArchived)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              showArchived
-                ? 'bg-gray-600 text-white hover:bg-gray-700'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-            }`}
-          >
-            {showArchived ? 'Tampilkan Aktif' : 'Tampilkan Arsip'}
-          </button>
-          <button onClick={openAdd} className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">
-            + Tambah Tugas
-          </button>
-        </div>
+    <>
+      <PageHeader
+        title="Kelola Tugas"
+        description="Kegiatan dan tugas yang tampil di kalender aplikasi."
+        actions={
+          <>
+            <Button
+              variant={showArchived ? 'primary' : 'secondary'}
+              onClick={() => setShowArchived((v) => !v)}
+            >
+              {showArchived ? 'Tampilkan Aktif' : 'Tampilkan Arsip'}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                crud.openAdd();
+                if (!isGlobal) crud.setField('class_name', scope?.replace('class:', '') ?? '');
+              }}
+              icon={<PlusIcon />}
+            >
+              Tambah Tugas
+            </Button>
+          </>
+        }
+      />
+
+      <div className="card overflow-hidden">
+        <DataTable
+          columns={columns}
+          rows={rows}
+          rowKey={(row) => row.id}
+          loading={crud.loading}
+          error={crud.loadError}
+          onRetry={crud.reload}
+          emptyTitle={showArchived ? 'Arsip kosong' : 'Belum ada tugas'}
+          emptyDescription={
+            showArchived
+              ? 'Tidak ada tugas yang diarsipkan.'
+              : 'Tambahkan tugas atau kegiatan pertama.'
+          }
+        />
       </div>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg flex items-center justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError('')} className="ml-2 text-red-400 hover:text-red-600 dark:hover:text-red-300">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
+      <Modal
+        open={crud.modalOpen}
+        onClose={crud.closeModal}
+        title={crud.editing ? 'Edit Tugas' : 'Tambah Tugas'}
+        size="lg"
+        footer={
+          <>
+            <Button onClick={crud.closeModal} disabled={crud.saving}>
+              Batal
+            </Button>
+            <Button variant="primary" onClick={handleSave} loading={crud.saving}>
+              Simpan
+            </Button>
+          </>
+        }
+      >
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSave();
+          }}
+        >
+          <TextField
+            label="Judul"
+            required
+            value={crud.form.title}
+            onChange={(e) => crud.setField('title', e.target.value)}
+            error={crud.fieldErrors.title}
+          />
 
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Judul</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Tanggal</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Kelas</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Lokasi</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Kategori</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.map((e) => (
-                <tr key={e.id} className="border-b border-gray-200 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900 dark:text-gray-100">{e.title}</div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                    {formatDateID(e.date)}{e.end_date && e.end_date !== e.date ? ` - ${formatDateID(e.end_date)}` : ''}{e.collection_time ? ` ${e.collection_time}` : ''}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                    {e.class_name ? <span className="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{e.class_name.replace(/_/g, '-')}</span> : <span className="text-gray-400 dark:text-gray-500">Global</span>}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{e.location || '-'}</td>
-                  <td className="px-4 py-3">
-                    {e.category && <span className="px-2 py-0.5 rounded-full text-xs bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">{e.category}</span>}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button onClick={() => openEdit(e)} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mr-2">Edit</button>
-                    <button
-                      onClick={() => handleArchive(e.id, e.is_archived === 0)}
-                      className={`text-xs hover:underline mr-2 ${e.is_archived === 0 ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}
-                    >
-                      {e.is_archived === 0 ? 'Arsipkan' : 'Pulihkan'}
-                    </button>
-                    <button onClick={() => setDeleteId(e.id)} className="text-xs text-red-600 dark:text-red-400 hover:underline">Hapus</button>
-                  </td>
-                </tr>
-              ))}
-              {filteredData.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">{showArchived ? 'Tidak ada data arsip' : 'Tidak ada data'}</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          <TextAreaField
+            label="Deskripsi (Markdown)"
+            value={crud.form.description}
+            onChange={(e) => crud.setField('description', e.target.value)}
+            rows={5}
+            className="font-mono"
+          />
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Tugas' : 'Tambah Tugas'} size="lg">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Judul *</label>
-            <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg" />
-            <FieldError error={fieldErrors.title} />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <TextField
+              label="Tanggal Mulai"
+              type="date"
+              required
+              value={crud.form.date}
+              onChange={(e) => crud.setField('date', e.target.value)}
+              error={crud.fieldErrors.date}
+            />
+            <TextField
+              label="Tanggal Akhir"
+              type="date"
+              required
+              value={crud.form.end_date}
+              onChange={(e) => crud.setField('end_date', e.target.value)}
+              error={crud.fieldErrors.end_date}
+            />
+            <TextField
+              label="Jam Pengumpulan"
+              type="time"
+              value={crud.form.collection_time}
+              onChange={(e) => crud.setField('collection_time', e.target.value)}
+            />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Deskripsi (Markdown)</label>
-            <div className="grid grid-cols-2 gap-3">
-              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={5} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg font-mono text-sm" />
-              <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-3 overflow-auto max-h-48 bg-gray-50 dark:bg-gray-800">
-                <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Preview:</p>
-                <div className="prose prose-sm max-w-none dark:prose-invert"><Markdown>{form.description || '_Tidak ada konten_'}</Markdown></div>
-              </div>
-            </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              label="Lokasi Pengumpulan"
+              value={crud.form.location}
+              onChange={(e) => crud.setField('location', e.target.value)}
+            />
+            <TextField
+              label="Kategori"
+              value={crud.form.category}
+              onChange={(e) => crud.setField('category', e.target.value)}
+            />
           </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tanggal Mulai *</label>
-              <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg" />
-              <FieldError error={fieldErrors.date} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tanggal Akhir *</label>
-              <input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg" />
-              <FieldError error={fieldErrors.end_date} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Jam Pengumpulan</label>
-              <input type="time" value={form.collection_time} onChange={(e) => setForm({ ...form, collection_time: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Lokasi Pengumpulan</label>
-              <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori</label>
-              <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg" />
-            </div>
-          </div>
+
           {isGlobal && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kelas</label>
-              <Combobox value={form.class_name} onChange={(v) => setForm({ ...form, class_name: v })} options={CLASS_OPTIONS} placeholder="Semua / Global" />
-            </div>
+            <SelectField
+              label="Kelas"
+              value={crud.form.class_name}
+              onChange={(e) => crud.setField('class_name', e.target.value)}
+              hint="Kosongkan agar tampil untuk semua kelas."
+            >
+              <option value="">Semua / Global</option>
+              {CLASS_LIST.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </SelectField>
           )}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button onClick={() => setModalOpen(false)} className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-sm">Batal</button>
-            <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50">
-              {saving ? 'Menyimpan...' : 'Simpan'}
-            </button>
-          </div>
-        </div>
+
+          {crud.saveError && (
+            <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+              {crud.saveError}
+            </p>
+          )}
+        </form>
       </Modal>
 
-      <Modal open={deleteId !== null} onClose={() => setDeleteId(null)} title="Hapus Tugas">
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Yakin ingin menghapus tugas ini?</p>
-        <div className="flex justify-end gap-3">
-          <button onClick={() => setDeleteId(null)} className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-sm">Batal</button>
-          <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Hapus</button>
-        </div>
-      </Modal>
+      <ConfirmDialog
+        open={crud.deleting !== null}
+        title="Hapus Tugas"
+        subject={crud.deleting?.title}
+        message="Tugas akan dihapus permanen dari kalender."
+        onConfirm={crud.confirmDelete}
+        onCancel={() => crud.setDeleting(null)}
+        loading={crud.deletePending}
+      />
+
+      {/* Archiving previously fired immediately with no confirmation. */}
+      <ConfirmDialog
+        open={archiving !== null}
+        title={archiving?.is_archived === 1 ? 'Pulihkan Tugas' : 'Arsipkan Tugas'}
+        subject={archiving?.title}
+        message={
+          archiving?.is_archived === 1
+            ? 'Tugas akan kembali tampil di kalender aktif.'
+            : 'Tugas akan dipindahkan ke arsip dan tidak lagi tampil di kalender aktif.'
+        }
+        confirmLabel={archiving?.is_archived === 1 ? 'Pulihkan' : 'Arsipkan'}
+        onConfirm={confirmArchive}
+        onCancel={() => setArchiving(null)}
+        loading={archivePending}
+      />
 
       <NotifyPrompt
-        open={notifyPromptClass !== null}
-        onClose={() => setNotifyPromptClass(null)}
-        defaultClass={notifyPromptClass ?? ''}
+        open={notifyClass !== null}
+        onClose={() => setNotifyClass(null)}
+        defaultClass={notifyClass ?? ''}
         type="kalender"
       />
-    </div>
+    </>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" d="M12 5v14M5 12h14" />
+    </svg>
   );
 }

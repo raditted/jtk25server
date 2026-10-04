@@ -20,6 +20,7 @@
     {"id": "H501-Lab. TI", "name": "H501 Lab. TI", "type": "lab"},
     {"id": "H502-Lab. AI", "name": "H502 Lab. AI", "type": "lab"},
     {"id": "H504-Kelas", "name": "H504 Kelas", "type": "kelas"},
-    {"id": "H506-Kelas", "name": "H506 Kelas", "type": "kelas"}
+    {"id": "H506-Kelas", "name": "H506 Kelas", "type": "kelas"},
+    {"id": "Online-Google Meet", "name": "Online (Google Meet)", "type": "online"}
   ]
 }

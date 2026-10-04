@@ -3,7 +3,6 @@ import { cors } from "hono/cors";
 import { etag } from "hono/etag";
 import type { Context } from "hono";
 import {
-  LIST_FILES,
   computeDataVersion,
   getSchedulesFromD1,
   getEventsFromD1,

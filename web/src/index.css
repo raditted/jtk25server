@@ -2,12 +2,92 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+/*
+ * Design tokens.
+ *
+ * Every surface, border and text colour in the admin area resolves to one of
+ * these variables, so a component never hardcodes `dark:` pairs. Switching a
+ * colour scheme means editing this block, not auditing every class string.
+ */
+@layer base {
+  :root {
+    --surface-page: #f8fafc;
+    --surface-card: #ffffff;
+    --surface-inset: #f1f5f9;
+    --surface-hover: #f8fafc;
+
+    --border-subtle: #e2e8f0;
+    --border-strong: #cbd5e1;
+
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+
+    --focus-ring: #6366f1;
+  }
+
+  .dark {
+    --surface-page: #020617;
+    --surface-card: #0f172a;
+    --surface-inset: #1e293b;
+    --surface-hover: #1e293b;
+
+    --border-subtle: #1e293b;
+    --border-strong: #334155;
+
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+
+    --focus-ring: #818cf8;
+  }
+
+  html {
+    /* Respect users who ask the OS to reduce motion. */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply antialiased transition-colors duration-200;
+    background-color: var(--surface-page);
+    color: var(--text-primary);
+    font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  /* A visible focus ring on every interactive element, in both themes. */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: 0.375rem;
+  }
+
+  /* Native <option> follows the OS scheme, so a dark select cannot open a
+     white list. */
+  select option {
+    background-color: var(--surface-card);
+    color: var(--text-primary);
+  }
 }
 
-@layer base {
-  body {
-    @apply bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-200;
+@layer components {
+  /* Page shell used by every admin and public route. */
+  .page-shell {
+    @apply mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8;
   }
+
+  /* Card surface. */
+  .card {
+    @apply rounded-xl border border-[var(--border-subtle)] shadow-sm;
+    background-color: var(--surface-card);
+  }
+
+  /* Inset panel used inside cards for forms and previews. */
+  .panel-inset {
+    @apply rounded-lg border border-[var(--border-subtle)] p-4;
+    background-color: var(--surface-inset);
+  }
+
+  .text-primary-token { color: var(--text-primary); }
+  .text-secondary-token { color: var(--text-secondary); }
+  .text-muted-token { color: var(--text-muted); }
 }

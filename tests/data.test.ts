@@ -1,57 +1,18 @@
 import { describe, it, expect } from "vitest";
 import {
-  getFileData,
-  getFilesData,
   computeDataVersion,
   CLASS_FILES,
-  LIST_FILES,
   ALL_FILES,
 } from "../src/data";
 
-describe("getFileData", () => {
-  it("returns bundled dosen data with expected shape", () => {
-    const data = getFileData("dosen.json") as {
-      schema: number;
-      semester: string;
-      data: Array<{ code: string; name: string }>;
-    };
-    expect(data).not.toBeNull();
-    expect(data.schema).toBe(2);
-    expect(Array.isArray(data.data)).toBe(true);
-    expect(data.data.length).toBeGreaterThan(0);
-    expect(data.data[0]).toHaveProperty("code");
-    expect(data.data[0]).toHaveProperty("name");
+describe("file lists", () => {
+  it("CLASS_FILES covers every class the admin API accepts", () => {
+    expect(CLASS_FILES.length).toBe(19);
+    expect(new Set(CLASS_FILES).size).toBe(CLASS_FILES.length);
   });
 
-  it("returns null for schedule files (now served from D1)", () => {
-    expect(getFileData("schedules_D3_2A.json")).toBeNull();
-  });
-
-  it("returns null for unknown file", () => {
-    expect(getFileData("nonexistent.json")).toBeNull();
-  });
-});
-
-describe("getFilesData", () => {
-  it("returns null values for CLASS_FILES (now served from D1)", () => {
-    const results = getFilesData(CLASS_FILES);
-    expect(results.size).toBe(CLASS_FILES.length);
-    for (const file of CLASS_FILES) {
-      expect(results.has(file)).toBe(true);
-      expect(results.get(file)).toBeNull();
-    }
-  });
-
-  it("returns data for LIST_FILES", () => {
-    const results = getFilesData(LIST_FILES);
-    expect(results.size).toBe(LIST_FILES.length);
-    for (const file of LIST_FILES) {
-      expect(results.has(file)).toBe(true);
-    }
-  });
-
-  it("ALL_FILES covers CLASS_FILES + LIST_FILES", () => {
-    expect(ALL_FILES).toEqual([...CLASS_FILES, ...LIST_FILES]);
+  it("ALL_FILES is exactly CLASS_FILES (all data now served from D1)", () => {
+    expect(ALL_FILES).toEqual([...CLASS_FILES]);
   });
 });
 

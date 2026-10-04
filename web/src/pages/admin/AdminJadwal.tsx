@@ -1,13 +1,16 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { apiClient } from '../../api';
+import { useEffect, useMemo, useState } from 'react';
+import { apiClient, isGlobalAdmin } from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
-import type { SchedulesResponse, ClassSchedule, Room } from '../../types';
+import type { SchedulesResponse, ScheduleSession, Room } from '../../types';
 import { DAYS, CLASS_LIST } from '../../types';
-import Modal from '../../components/Modal';
-import Combobox from '../../components/Combobox';
-import { showToast } from '../../components/Toast';
-import { required, FieldError } from '../../lib/validation';
+import { PageHeader } from '../../components/AdminLayout';
 import NotifyPrompt from '../../components/NotifyPrompt';
+import Badge, { ModeBadge } from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import { SelectField, TextField } from '../../components/ui/Field';
+import Modal from '../../components/Modal';
+import { showToast } from '../../components/Toast';
 
 interface FormData {
   class_name: string;
@@ -39,189 +42,176 @@ const EMPTY_FORM: FormData = {
   mode: 'offline',
 };
 
+/** Room ids that mark a session as online (mirrors the server's rule). */
+function isOnlineRoom(room: string): boolean {
+  return room.startsWith('Online-');
+}
+
 export default function AdminJadwal() {
-  const { isGlobal, scope } = useAuth();
+  const { scope } = useAuth();
+  const isGlobal = isGlobalAdmin();
+  const myClass = !isGlobal ? scope?.replace('class:', '') : null;
+
   const [data, setData] = useState<SchedulesResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedClass, setSelectedClass] = useState('');
+
+  const [rooms, setRooms] = useState<Room[]>([]);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
-  const [rooms, setRooms] = useState<Room[]>([]);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [notifyPromptClass, setNotifyPromptClass] = useState<string | null>(null);
 
-  const myClass = !isGlobal ? scope?.replace('class:', '') : null;
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; label: string } | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
+  const [notifyClass, setNotifyClass] = useState<string | null>(null);
 
-  const load = useCallback(() => {
-    apiClient.get<SchedulesResponse>('/admin/schedules')
-      .then((res) => {
+  const load = useMemo(
+    () => async (keepClass?: string) => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const res = await apiClient.get<SchedulesResponse>('/admin/schedules');
         setData(res);
-        if (res.classes.length > 0 && !selectedClass) {
-          setSelectedClass(res.classes[0].class_name);
-        }
-      })
-      .catch(() => setError('Gagal memuat jadwal'))
-      .finally(() => setLoading(false));
-  }, [selectedClass]);
-
-  useEffect(() => { load(); }, [load]);
+        setSelectedClass((prev) => {
+          const wanted = keepClass ?? prev;
+          const names = res.classes.map((c) => c.class_name);
+          if (wanted && names.includes(wanted)) return wanted;
+          return names[0] ?? '';
+        });
+      } catch {
+        setLoadError('Gagal memuat jadwal');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    apiClient.get<Room[]>('/rooms').then(setRooms).catch(() => {});
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    apiClient.get<Room[]>('/rooms').then(setRooms).catch(() => setRooms([]));
   }, []);
 
   const selected = data?.classes.find((c) => c.class_name === selectedClass);
 
-  const timeOptions = useMemo(() => {
-    if (!data) return [];
-    const times = new Set<string>();
-    data.classes.forEach((c) =>
-      c.schedule.forEach((d) => d.sessions.forEach((s) => times.add(s.time))),
-    );
-    return Array.from(times).sort().map((t) => ({ value: t, label: t }));
-  }, [data]);
-
-  const courseLookup = useMemo(() => {
-    if (!data) return new Map<string, string>();
-    const map = new Map<string, string>();
-    data.classes.forEach((c) =>
-      c.schedule.forEach((d) =>
-        d.sessions.forEach((s) => {
-          if (s.course_code && !map.has(s.course_code)) {
-            map.set(s.course_code, s.course_name);
-          }
-        }),
-      ),
-    );
-    return map;
-  }, [data]);
-
-  const courseOptions = useMemo(
-    () =>
-      Array.from(courseLookup.entries()).map(([code, name]) => ({
-        value: code,
-        label: `${code} - ${name}`,
-      })),
-    [courseLookup],
-  );
-
-  const courseNameLookup = useMemo(() => {
-    if (!data) return new Map<string, string>();
-    const map = new Map<string, string>();
-    data.classes.forEach((c) =>
-      c.schedule.forEach((d) =>
-        d.sessions.forEach((s) => {
-          if (s.course_name && !map.has(s.course_name)) {
-            map.set(s.course_name, s.course_code);
-          }
-        }),
-      ),
-    );
-    return map;
-  }, [data]);
-
-  const courseNameOptions = useMemo(
-    () =>
-      Array.from(courseNameLookup.entries()).map(([name, code]) => ({
-        value: name,
-        label: `${code} - ${name}`,
-      })),
-    [courseNameLookup],
-  );
-
-  const lecturerLookup = useMemo(() => {
-    if (!data) return new Map<string, string>();
-    const map = new Map<string, string>();
-    data.classes.forEach((c) =>
-      c.schedule.forEach((d) =>
-        d.sessions.forEach((s) => {
-          if (s.lecturer_code && !map.has(s.lecturer_code)) {
-            map.set(s.lecturer_code, s.lecturer);
-          }
-        }),
-      ),
-    );
-    return map;
-  }, [data]);
-
-  const lecturerOptions = useMemo(
-    () =>
-      Array.from(lecturerLookup.entries()).map(([code, name]) => ({
-        value: code,
-        label: `${code} - ${name}`,
-      })),
-    [lecturerLookup],
-  );
-
-  const lecturerNameLookup = useMemo(() => {
-    if (!data) return new Map<string, string>();
-    const map = new Map<string, string>();
-    data.classes.forEach((c) =>
-      c.schedule.forEach((d) =>
-        d.sessions.forEach((s) => {
-          if (s.lecturer && !map.has(s.lecturer)) {
-            map.set(s.lecturer, s.lecturer_code);
-          }
-        }),
-      ),
-    );
-    return map;
-  }, [data]);
-
-  const lecturerNameOptions = useMemo(
-    () =>
-      Array.from(lecturerNameLookup.entries()).map(([name, code]) => ({
-        value: name,
-        label: `${code} - ${name}`,
-      })),
-    [lecturerNameLookup],
-  );
-
-  const roomOptions = useMemo(
-    () => [
-      { value: 'Online', label: '🌐 Online' },
-      ...rooms.map((r) => ({ value: r.name, label: r.name })),
-    ],
+  // A room whose type is online forces mode online, matching server behaviour.
+  const onlineRoomIds = useMemo(
+    () => new Set(rooms.filter((r) => r.type === 'online').map((r) => r.ext_id)),
     [rooms],
   );
 
+  const classList = useMemo(() => {
+    const available = new Set((data?.classes ?? []).map((c) => c.class_name));
+    const list = CLASS_LIST.filter((c) => available.has(c));
+    return list.length > 0 ? list : Array.from(available);
+  }, [data]);
+
+  /** Existing time ranges, offered as suggestions but still free text. */
+  const timeOptions = useMemo(() => {
+    const times = new Set<string>();
+    data?.classes.forEach((c) =>
+      c.schedule.forEach((d) => d.sessions.forEach((s) => times.add(s.time))),
+    );
+    return Array.from(times).sort();
+  }, [data]);
+
+  /** Known courses, so code↔name can be filled in automatically. */
+  const courseLookup = useMemo(() => {
+    const byCode = new Map<string, string>();
+    const byName = new Map<string, string>();
+    data?.classes.forEach((c) =>
+      c.schedule.forEach((d) =>
+        d.sessions.forEach((s) => {
+          if (s.course_code && !byCode.has(s.course_code)) {
+            byCode.set(s.course_code, s.course_name);
+          }
+          if (s.course_name && !byName.has(s.course_name)) {
+            byName.set(s.course_name, s.course_code);
+          }
+        }),
+      ),
+    );
+    return { byCode, byName };
+  }, [data]);
+
+  const lecturerLookup = useMemo(() => {
+    const byCode = new Map<string, string>();
+    const byName = new Map<string, string>();
+    data?.classes.forEach((c) =>
+      c.schedule.forEach((d) =>
+        d.sessions.forEach((s) => {
+          if (s.lecturer_code && !byCode.has(s.lecturer_code)) {
+            byCode.set(s.lecturer_code, s.lecturer);
+          }
+          if (s.lecturer && !byName.has(s.lecturer)) {
+            byName.set(s.lecturer, s.lecturer_code);
+          }
+        }),
+      ),
+    );
+    return { byCode, byName };
+  }, [data]);
+
+  /** Dosen codes seen in any schedule, for the code/name pickers. */
+  const dosenOptions = useMemo(
+    () =>
+      Array.from(lecturerLookup.byCode.entries())
+        .map(([code, name]) => ({ code, name }))
+        .sort((a, b) => a.code.localeCompare(b.code)),
+    [lecturerLookup],
+  );
+
+  function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setFieldErrors((prev) => ({ ...prev, [key as string]: '' }));
+  }
+
   function handleCourseCodeChange(val: string) {
-    const matchedName = courseLookup.get(val);
     setForm((prev) => ({
       ...prev,
       course_code: val,
-      course_name: matchedName ?? prev.course_name,
+      course_name: courseLookup.byCode.get(val) ?? prev.course_name,
     }));
   }
 
   function handleCourseNameChange(val: string) {
-    const matchedCode = courseNameLookup.get(val);
     setForm((prev) => ({
       ...prev,
       course_name: val,
-      course_code: matchedCode ?? prev.course_code,
+      course_code: courseLookup.byName.get(val) ?? prev.course_code,
     }));
   }
 
   function handleLecturerCodeChange(val: string) {
-    const matchedName = lecturerLookup.get(val);
     setForm((prev) => ({
       ...prev,
       lecturer_code: val,
-      lecturer: matchedName ?? prev.lecturer,
+      lecturer: lecturerLookup.byCode.get(val) ?? prev.lecturer,
     }));
   }
 
   function handleLecturerNameChange(val: string) {
-    const matchedCode = lecturerNameLookup.get(val);
     setForm((prev) => ({
       ...prev,
       lecturer: val,
-      lecturer_code: matchedCode ?? prev.lecturer_code,
+      lecturer_code: lecturerLookup.byName.get(val) ?? prev.lecturer_code,
+    }));
+  }
+
+  /** Picking a room updates mode so the two never disagree. */
+  function handleRoomChange(val: string) {
+    setForm((prev) => ({
+      ...prev,
+      room: val,
+      mode: isOnlineRoom(val) || onlineRoomIds.has(val) ? 'online' : 'offline',
     }));
   }
 
@@ -231,21 +221,18 @@ export default function AdminJadwal() {
       ...EMPTY_FORM,
       class_name: myClass || selectedClass || '',
       semester: data?.semester || '',
+      day: DAYS.find((d) => selected?.schedule.some((s) => s.day === d)) ?? 'SENIN',
     });
     setFieldErrors({});
-    setError('');
+    setSaveError(null);
     setModalOpen(true);
   }
 
-  function openEdit(day: string, time: string, courseCode: string, cls: ClassSchedule) {
-    const session = cls.schedule
-      .flatMap((d) => d.sessions.map((s) => ({ ...s, day: d.day })))
-      .find((s) => s.day === day && s.time === time && s.course_code === courseCode);
-    if (!session) return;
-
+  function openEdit(session: ScheduleSession, day: string, cls: string) {
+    setEditingId(session.id ?? null);
     setForm({
-      class_name: cls.class_name,
-      day: session.day,
+      class_name: cls,
+      day,
       time: session.time,
       course_code: session.course_code,
       course_name: session.course_name,
@@ -253,19 +240,18 @@ export default function AdminJadwal() {
       lecturer_code: session.lecturer_code,
       lecturer: session.lecturer,
       room: session.room,
-      semester: data?.semester || '',
+      semester: data?.semester ?? '',
       slot_order: 0,
-      mode: session.mode || 'offline',
+      mode: session.mode ?? 'offline',
     });
-    setEditingId(session.id ?? null);
     setFieldErrors({});
-    setError('');
+    setSaveError(null);
     setModalOpen(true);
   }
 
   function validate(): boolean {
     const errors: Record<string, string> = {};
-    const checks: Array<[string, string, string]> = [
+    const checks: Array<[keyof FormData, string, string]> = [
       ['class_name', form.class_name, 'Kelas'],
       ['day', form.day, 'Hari'],
       ['time', form.time, 'Jam'],
@@ -276,8 +262,7 @@ export default function AdminJadwal() {
       ['room', form.room, 'Ruang'],
     ];
     for (const [field, value, label] of checks) {
-      const err = required(value, label);
-      if (err) errors[field] = err;
+      if (!value.trim()) errors[field as string] = `${label} wajib diisi`;
     }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -286,7 +271,7 @@ export default function AdminJadwal() {
   async function handleSave() {
     if (!validate()) return;
     setSaving(true);
-    setError('');
+    setSaveError(null);
     try {
       if (editingId === null) {
         await apiClient.post('/admin/schedules', form);
@@ -295,13 +280,14 @@ export default function AdminJadwal() {
       }
       showToast(editingId === null ? 'Jadwal ditambahkan' : 'Jadwal diperbarui', 'success');
       setModalOpen(false);
-      load();
-      setNotifyPromptClass(form.class_name);
-    } catch (e: unknown) {
-      const msg = (e instanceof Error && 'body' in e)
-        ? (e as { body?: { error?: string } }).body?.error || 'Gagal menyimpan'
-        : 'Gagal menyimpan';
-      setError(msg);
+      await load(form.class_name);
+      setNotifyClass(form.class_name);
+    } catch (e) {
+      const msg =
+        e instanceof Error && 'body' in e
+          ? (e as { body?: { error?: string } }).body?.error ?? 'Gagal menyimpan'
+          : 'Gagal menyimpan';
+      setSaveError(msg);
       showToast(msg, 'error');
     } finally {
       setSaving(false);
@@ -309,284 +295,375 @@ export default function AdminJadwal() {
   }
 
   async function handleDelete() {
-    if (deleteTarget === null) return;
+    if (!deleteTarget) return;
+    setDeletePending(true);
     try {
-      await apiClient.delete(`/admin/schedules/${deleteTarget}`);
+      await apiClient.delete(`/admin/schedules/${deleteTarget.id}`);
       showToast('Jadwal dihapus', 'success');
       setDeleteTarget(null);
-      load();
-      setNotifyPromptClass(selected?.class_name ?? '');
-    } catch (e: unknown) {
-      const msg = (e instanceof Error && 'body' in e)
-        ? (e as { body?: { error?: string } }).body?.error || 'Gagal menghapus'
-        : 'Gagal menghapus';
-      setError(msg);
-      showToast(msg, 'error');
+      await load();
+      setNotifyClass(selectedClass);
+    } catch (e) {
+      showToast(
+        e instanceof Error && 'body' in e
+          ? (e as { body?: { error?: string } }).body?.error ?? 'Gagal menghapus'
+          : 'Gagal menghapus',
+        'error',
+      );
+    } finally {
+      setDeletePending(false);
     }
   }
 
-  if (loading) {
-    return <div className="p-8 text-center text-gray-400 dark:text-gray-500">Memuat...</div>;
-  }
-
-  const classList = myClass ? CLASS_LIST.filter((c) => c === myClass) : CLASS_LIST;
+  const onlineRooms = rooms.filter((r) => r.type === 'online');
+  const physicalRooms = rooms.filter((r) => r.type !== 'online');
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Kelola Jadwal</h1>
-        <button
-          onClick={openAdd}
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
-        >
-          + Tambah Jadwal
-        </button>
-      </div>
+    <>
+      <PageHeader
+        title="Kelola Jadwal"
+        description="Sesi kuliah tetap untuk setiap kelas. Sesi online memakai ruang virtual dan tidak memblokir ruangan fisik."
+        actions={
+          <Button variant="primary" onClick={openAdd} icon={<PlusIcon />}>
+            Tambah Jadwal
+          </Button>
+        }
+      />
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">
-          {error}
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <div className="w-full sm:w-64">
+          <SelectField label="Kelas" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
+            {classList.map((c) => (
+              <option key={c} value={c}>
+                {c.replace(/_/g, '-')}
+              </option>
+            ))}
+          </SelectField>
         </div>
-      )}
-
-      <div className="mb-6">
-        <select
-          value={selectedClass}
-          onChange={(e) => setSelectedClass(e.target.value)}
-          className="w-full sm:w-64 px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg"
-        >
-          {classList.map((c) => (
-            <option key={c} value={c}>{c.replace(/_/g, '-')}</option>
-          ))}
-        </select>
+        <Button onClick={() => void load()} loading={loading}>
+          Muat ulang
+        </Button>
       </div>
 
-      {selected && (
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-          {selected.schedule.length === 0 ? (
-            <div className="p-8 text-center text-gray-400 dark:text-gray-500">Belum ada jadwal untuk kelas ini</div>
-          ) : (
-            selected.schedule.map((daySchedule) => (
-              <div key={daySchedule.day} className="border-b border-gray-200 dark:border-gray-700 last:border-0">
-                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 font-medium text-sm text-gray-600 dark:text-gray-400">
-                  {daySchedule.day}
-                </div>
+      {loading && !data ? (
+        <div className="card flex items-center justify-center gap-3 px-6 py-14" role="status">
+          <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
+          <span className="text-sm text-muted-token">Memuat…</span>
+        </div>
+      ) : loadError ? (
+        <div role="alert" className="card px-6 py-14 text-center">
+          <p className="font-medium text-primary-token">{loadError}</p>
+          <Button className="mt-3" onClick={() => void load()}>
+            Coba lagi
+          </Button>
+        </div>
+      ) : !selected || selected.schedule.length === 0 ? (
+        <div className="card px-6 py-14 text-center">
+          <p className="font-medium text-primary-token">Belum ada jadwal untuk kelas ini</p>
+          <p className="mt-1 text-sm text-muted-token">
+            Tambahkan sesi pertama untuk {selectedClass || 'kelas ini'}.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {DAYS.filter((day) => selected.schedule.some((d) => d.day === day)).map((day) => {
+            const daySchedule = selected.schedule.find((d) => d.day === day);
+            if (!daySchedule) return null;
+
+            return (
+              <section key={day} className="card overflow-hidden">
+                <header className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--surface-inset)] px-4 py-3">
+                  <h2 className="text-sm font-semibold text-primary-token">{day}</h2>
+                  <Badge tone="neutral">{daySchedule.sessions.length} sesi</Badge>
+                </header>
+
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full border-collapse text-sm">
                     <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Jam</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">MK</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Tipe</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Dosen</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Ruang</th>
-                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Aksi</th>
+                      <tr className="border-b border-[var(--border-subtle)]">
+                        {['Jam', 'Mata Kuliah', 'Tipe', 'Dosen', 'Ruang', 'Mode', 'Aksi'].map((h, i) => (
+                          <th
+                            key={h}
+                            scope="col"
+                            className={`px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-token ${
+                              i === 5 || i === 6 ? 'text-right' : 'text-left'
+                            }`}
+                          >
+                            {h}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
                       {daySchedule.sessions.map((s, i) => (
                         <tr
                           key={s.id ?? i}
-                          className="border-b border-gray-200 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                          className="border-b border-[var(--border-subtle)] transition-colors last:border-0 hover:bg-[var(--surface-hover)]"
                         >
-                          <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{s.time}</td>
+                          <td className="whitespace-nowrap px-4 py-3 font-medium text-primary-token">{s.time}</td>
                           <td className="px-4 py-3">
-                            <div className="font-medium text-gray-900 dark:text-gray-100">{s.course_code}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">{s.course_name}</div>
+                            <p className="font-medium text-primary-token">{s.course_code}</p>
+                            <p className="mt-0.5 text-xs text-muted-token">{s.course_name}</p>
                           </td>
                           <td className="px-4 py-3">
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">{s.type}</span>
+                            <Badge tone={s.type === 'TE' ? 'info' : 'success'}>
+                              {s.type === 'TE' ? 'Teori' : 'Praktik'}
+                            </Badge>
                           </td>
-                          <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{s.lecturer || s.lecturer_code}</td>
-                          <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{s.room}</td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap">
-                            <button
-                              onClick={() => openEdit(daySchedule.day, s.time, s.course_code, selected)}
-                              className="text-xs text-primary-600 dark:text-primary-400 hover:underline mr-2"
-                            >
-                              Edit
-                            </button>
-                            {s.id != null && (
-                              <button
-                                onClick={() => setDeleteTarget(s.id!)}
-                                className="text-xs text-red-600 dark:text-red-400 hover:underline"
-                              >
-                                Hapus
-                              </button>
-                            )}
+                          <td className="px-4 py-3 text-secondary-token">
+                            {s.lecturer || s.lecturer_code}
+                          </td>
+                          <td className="px-4 py-3 text-secondary-token">{s.room}</td>
+                          <td className="px-4 py-3 text-right">
+                            <ModeBadge mode={s.mode} />
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-1">
+                              <Button size="sm" variant="ghost" onClick={() => openEdit(s, day, selected.class_name)}>
+                                Edit
+                              </Button>
+                              {s.id != null && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() =>
+                                    setDeleteTarget({
+                                      id: s.id!,
+                                      label: `${s.time} · ${s.course_code} · ${s.course_name}`,
+                                    })
+                                  }
+                                >
+                                  <span className="text-red-600 dark:text-red-400">Hapus</span>
+                                </Button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </div>
-            ))
-          )}
+              </section>
+            );
+          })}
         </div>
       )}
 
       <Modal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => !saving && setModalOpen(false)}
         title={editingId !== null ? 'Edit Jadwal' : 'Tambah Jadwal'}
         size="lg"
+        footer={
+          <>
+            <Button onClick={() => setModalOpen(false)} disabled={saving}>
+              Batal
+            </Button>
+            <Button variant="primary" onClick={handleSave} loading={saving}>
+              Simpan
+            </Button>
+          </>
+        }
       >
-        <div className="space-y-4">
-          {error && (
-            <div className="p-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">{error}</div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kelas *</label>
-            <select
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSave();
+          }}
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Kelas"
+              required
               value={form.class_name}
-              onChange={(e) => setForm({ ...form, class_name: e.target.value })}
+              onChange={(e) => setField('class_name', e.target.value)}
               disabled={!isGlobal}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg disabled:bg-gray-100 dark:disabled:bg-gray-700"
+              error={fieldErrors.class_name}
             >
               {classList.map((c) => (
-                <option key={c} value={c}>{c.replace(/_/g, '-')}</option>
+                <option key={c} value={c}>
+                  {c.replace(/_/g, '-')}
+                </option>
               ))}
-            </select>
-            <FieldError error={fieldErrors.class_name ?? null} />
-          </div>
+            </SelectField>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hari *</label>
-              <select
-                value={form.day}
-                onChange={(e) => setForm({ ...form, day: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg"
-              >
-                {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
-              <FieldError error={fieldErrors.day ?? null} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipe *</label>
-              <select
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg"
-              >
-                <option value="TE">Teori</option>
-                <option value="PR">Praktikum</option>
-              </select>
-              <FieldError error={fieldErrors.type ?? null} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Jam *</label>
-              <Combobox
-                value={form.time}
-                onChange={(val) => setForm({ ...form, time: val })}
-                options={timeOptions}
-                placeholder="07.00-07.50"
-              />
-              <FieldError error={fieldErrors.time ?? null} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ruang *</label>
-              <Combobox
-                value={form.room}
-                onChange={(val) => setForm({ ...form, room: val })}
-                options={roomOptions}
-                placeholder="H504-Kelas"
-              />
-              <FieldError error={fieldErrors.room ?? null} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kode MK *</label>
-              <Combobox
-                value={form.course_code}
-                onChange={handleCourseCodeChange}
-                options={courseOptions}
-                placeholder="TI201"
-              />
-              <FieldError error={fieldErrors.course_code ?? null} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama MK *</label>
-              <Combobox
-                value={form.course_name}
-                onChange={handleCourseNameChange}
-                options={courseNameOptions}
-                placeholder="Basis Data"
-              />
-              <FieldError error={fieldErrors.course_name ?? null} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kode Dosen *</label>
-              <Combobox
-                value={form.lecturer_code}
-                onChange={handleLecturerCodeChange}
-                options={lecturerOptions}
-                placeholder="TG"
-              />
-              <FieldError error={fieldErrors.lecturer_code ?? null} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama Dosen</label>
-              <Combobox
-                value={form.lecturer}
-                onChange={handleLecturerNameChange}
-                options={lecturerNameOptions}
-                placeholder="Trisna Gelar, S.T., M.Kom."
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
-              onClick={() => setModalOpen(false)}
-              className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-sm"
+            <SelectField
+              label="Hari"
+              required
+              value={form.day}
+              onChange={(e) => setField('day', e.target.value)}
+              error={fieldErrors.day}
             >
-              Batal
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
-            >
-              {saving ? 'Menyimpan...' : 'Simpan'}
-            </button>
+              {DAYS.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </SelectField>
           </div>
-        </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              label="Jam"
+              required
+              value={form.time}
+              onChange={(e) => setField('time', e.target.value)}
+              error={fieldErrors.time}
+              placeholder="07.00-07.50"
+              list="jadwal-times"
+            />
+            <datalist id="jadwal-times">
+              {timeOptions.map((t) => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+
+            <SelectField
+              label="Tipe"
+              required
+              value={form.type}
+              onChange={(e) => setField('type', e.target.value)}
+              error={fieldErrors.type}
+            >
+              <option value="TE">Teori</option>
+              <option value="PR">Praktikum</option>
+            </SelectField>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              label="Kode MK"
+              required
+              value={form.course_code}
+              onChange={(e) => handleCourseCodeChange(e.target.value)}
+              error={fieldErrors.course_code}
+              placeholder="25TI2103"
+              list="jadwal-courses"
+            />
+            <datalist id="jadwal-courses">
+              {Array.from(courseLookup.byCode.entries()).map(([code, name]) => (
+                <option key={code} value={code}>{`${code} — ${name}`}</option>
+              ))}
+            </datalist>
+
+            <TextField
+              label="Nama MK"
+              required
+              value={form.course_name}
+              onChange={(e) => handleCourseNameChange(e.target.value)}
+              error={fieldErrors.course_name}
+              placeholder="Aljabar Linear"
+              list="jadwal-course-names"
+            />
+            <datalist id="jadwal-course-names">
+              {Array.from(courseLookup.byName.entries()).map(([name, code]) => (
+                <option key={name} value={name}>{`${code} — ${name}`}</option>
+              ))}
+            </datalist>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              label="Kode Dosen"
+              required
+              value={form.lecturer_code}
+              onChange={(e) => handleLecturerCodeChange(e.target.value)}
+              error={fieldErrors.lecturer_code}
+              placeholder="MR"
+              list="jadwal-dosen"
+            />
+            <datalist id="jadwal-dosen">
+              {dosenOptions.map((d) => (
+                <option key={d.code} value={d.code}>{`${d.code} — ${d.name}`}</option>
+              ))}
+            </datalist>
+
+            <TextField
+              label="Nama Dosen"
+              value={form.lecturer}
+              onChange={(e) => handleLecturerNameChange(e.target.value)}
+              list="jadwal-dosen-names"
+            />
+            <datalist id="jadwal-dosen-names">
+              {dosenOptions.map((d) => (
+                <option key={d.code} value={d.name}>{`${d.code} — ${d.name}`}</option>
+              ))}
+            </datalist>
+          </div>
+
+          {/* Room and mode are kept consistent: an online room forces online. */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Ruang"
+              required
+              value={form.room}
+              onChange={(e) => handleRoomChange(e.target.value)}
+              error={fieldErrors.room}
+              hint="Pilih ruang online untuk sesi jarak jauh."
+            >
+              <option value="">— Pilih ruangan —</option>
+              {onlineRooms.length > 0 && (
+                <optgroup label="Online">
+                  {onlineRooms.map((r) => (
+                    <option key={r.ext_id} value={r.ext_id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label="Ruangan fisik">
+                {physicalRooms.map((r) => (
+                  <option key={r.ext_id} value={r.ext_id}>
+                    {r.name}
+                  </option>
+                ))}
+              </optgroup>
+            </SelectField>
+
+            <div>
+              <span className="mb-1.5 block text-sm font-medium text-primary-token">Mode</span>
+              <div className="flex min-h-[40px] items-center">
+                <ModeBadge mode={form.mode} />
+              </div>
+              <p className="mt-1.5 text-sm text-muted-token">
+                Diatur otomatis dari pilihan ruangan.
+              </p>
+            </div>
+          </div>
+
+          {saveError && (
+            <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+              {saveError}
+            </p>
+          )}
+        </form>
       </Modal>
 
-      <Modal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} title="Hapus Jadwal">
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Yakin ingin menghapus jadwal ini?</p>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={() => setDeleteTarget(null)}
-            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-sm"
-          >
-            Batal
-          </button>
-          <button
-            onClick={handleDelete}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-          >
-            Hapus
-          </button>
-        </div>
-      </Modal>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Hapus Jadwal"
+        subject={deleteTarget?.label}
+        message="Sesi ini akan dihapus dari jadwal kelas."
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+        loading={deletePending}
+      />
+
       <NotifyPrompt
-        open={notifyPromptClass !== null}
-        onClose={() => setNotifyPromptClass(null)}
-        defaultClass={notifyPromptClass ?? ''}
+        open={notifyClass !== null}
+        onClose={() => setNotifyClass(null)}
+        defaultClass={notifyClass ?? ''}
         type="jadwal"
       />
-    </div>
+    </>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" d="M12 5v14M5 12h14" />
+    </svg>
   );
 }

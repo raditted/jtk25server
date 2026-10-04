@@ -3,11 +3,12 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "build:web": "cd web && npm install && npm run build",
+    "build:web": "cd web && npm install --include=dev && npm run build",
     "deploy": "npm run build:web && wrangler deploy",
     "validate": "tsx tools/validate.ts",
     "test": "vitest run",
-    "db:migrate": "wrangler d1 execute jtk25-schedules --file migrations/0003_notification_sent_log.sql --local"
+    "db:migrate": "wrangler d1 migrations apply jtk25-schedules --local",
+    "db:migrate:remote": "wrangler d1 migrations apply jtk25-schedules --remote"
   },
   "dependencies": {
     "hono": "^4.13.7"

@@ -44,22 +44,21 @@ Dibangun dengan [Hono](https://hono.dev) di [Cloudflare Workers](https://workers
 
 ## Arsitektur Data
 
-### Data Files (11 file, bundled ke Worker)
+### Data Files (reference/seed — runtime dilayani D1)
 
 ```
 data/
-├── schedules_D3_S3_A.json     # Jadwal D3-2A (semester 3)
-├── schedules_D3_S3_B.json     # Jadwal D3-2B
-├── schedules_D4_S3_A.json     # Jadwal D4-3T-A
-├── schedules_D4_S3_B.json     # Jadwal D4-3T-B
-├── schedules_D4_S3_C.json     # Jadwal D4-3T-C
-├── schedules_D4_S3_D.json     # Jadwal D4-3T-D
-├── pengganti.json             # Jadwal pengganti (saat ini kosong)
-├── announcements.json         # Pengumuman (1 seed entry)
-├── events.json                # Kegiatan (1 seed entry)
+├── announcements.json         # Pengumuman seed
+├── calendar.json              # Kegiatan seed
+├── pengganti.json             # Jadwal pengganti seed (kosong)
 ├── dosen.json                 # 42 dosen (code + name)
-└── rooms.json                 # 16 ruangan (kelas + lab)
+├── rooms.json                 # Ruangan (kelas / lab / online)
+├── schedules_D4_2B.json       # Jadwal D4-2B (terbaru: sesi online)
+└── seeding/                   # Source markdown + aturan transformasi
 ```
+
+> Semua endpoint runtime membaca dari **D1**, bukan dari JSON di `data/`.
+> File JSON dipakai sebagai seed/reference dan divalidasi oleh `npm run validate`.
 
 ### Format Data (Schema v2)
 
@@ -84,9 +83,27 @@ Semua file mengikuti envelope:
   "type": "TE",
   "lecturer_code": "MV, LH, RA",
   "lecturer": "Nama Lengkap",
-  "room": "H501-Lab. TI"
+  "room": "H501-Lab. TI",
+  "mode": "offline"
 }
 ```
+
+### Sesi Online
+
+Kolom `schedules.mode` bernilai `offline` atau `online`. Sesi online memakai
+**ruangan virtual** (`rooms.type = 'online'`), bukan ruangan fisik, sehingga:
+
+- sesi online **tidak** masuk ke matriks okupansi ruangan fisik,
+- ketersediaan ruangan **tidak** dihitung dari sesi online,
+- `rooms.type` menerima nilai `kelas`, `lab`, dan `online`
+  (lihat `migrations/0006_online_rooms.sql`).
+
+Admin API menjaga `room` dan `mode` selalu konsisten: ruangan dengan awalan
+`Online-` dipaksa `mode = 'online'` (`effectiveMode()` di `src/admin.ts`).
+Validator menolak `room` yang tidak ada di `rooms.json` serta `mode` yang
+bertentangan dengan tipe ruangan tersebut.
+
+Ruangan online bawaan: `Online-Google Meet` — "Online (Google Meet)".
 
 ### Alur Update Data
 
@@ -96,19 +113,9 @@ Semua file mengikuti envelope:
 4. Deploy: `npm run deploy` (build web + wrangler deploy)
 5. Data terbaru langsung tersedia di API
 
-### Data Legacy (6 file, TIDAK dilayani Worker)
+### Data Legacy
 
-```
-data/legacy/
-├── schedules_1A_D3.json       # Format v1 lama (semester 1)
-├── schedules_1A_D4.json
-├── schedules_1B_D3.json
-├── schedules_1B_D4.json
-├── schedules_1C_D4.json
-└── schedules_1D_D4.json
-```
-
-Format v1 berbeda: tidak ada wrapper `schema`/`semester`/`updatedAt`, shape `{ academic_year, semester, curriculum, class_name, schedule }`.
+Folder `data/legacy/` sudah dihapus — semua jadwal kini dilayani oleh D1.
 
 ### Seeding Reference
 
@@ -173,10 +180,15 @@ npm run test                    # Jalankan test suite
 | Script | Command | Deskripsi |
 |--------|---------|-----------|
 | `dev` | `wrangler dev` | Local dev server |
-| `build:web` | `cd ../client && flutter build web --release && cd ../server && node scripts/copy-web.js` | Build Flutter web + copy |
-| `deploy` | `npm run build:web && wrangler deploy` | Full deploy |
+| `build:web` | `cd web && npm install --include=dev && npm run build` | Build the React admin/public SPA → `web/dist` |
+| `deploy` | `npm run build:web && wrangler deploy` | Build web + deploy Worker |
 | `validate` | `tsx tools/validate.ts` | Validasi data |
 | `test` | `vitest run` | Test suite |
+| `db:migrate` | `wrangler d1 migrations apply jtk25-schedules --local` | Apply migrations to local D1 |
+| `db:migrate:remote` | `wrangler d1 migrations apply jtk25-schedules --remote` | Apply migrations to production D1 |
+
+> Catatan: `--include=dev` wajib dipakai pada `build:web` karena `tsc -b` butuh
+> `typescript` dari `devDependencies`.
 
 ### Dependencies
 
@@ -206,31 +218,30 @@ Jangan pernah commit API token atau credential Cloudflare ke repository.
 ```
 server/
 ├── src/
-│   ├── index.ts               # Hono app: 9 endpoints + SPA fallback, 112 lines
-│   └── data.ts                # Data loading: static imports + SHA-256 hash, 77 lines
+│   ├── index.ts               # Hono app: routes + SPA fallback
+│   ├── admin.ts               # Admin schedules CRUD + auth
+│   ├── admin_content.ts       # Admin CRUD untuk rooms/events/announcements/pengganti
+│   ├── data.ts                # D1 queries + SHA-256 data version
+│   ├── cron.ts, dedup.ts, fcm.ts
 │
-├── data/                      # 11 JSON files (6 schedules + 5 master data)
-│   ├── legacy/                # 6 files format v1 (tidak dilayani Worker)
+├── data/                      # 5 master-data JSON (seed/reference; runtime dari D1)
 │   └── seeding/               # Source markdown + aturan transformasi
 │
 ├── schemas/                   # 6 JSON Schema files (draft-07)
 ├── tools/
-│   └── validate.ts            # CLI validator: AJV + cross-file rules, 214 lines
-├── scripts/
-│   └── copy-web.js            # Copy Flutter build → client_build/web/
+│   ├── validate.ts            # CLI validator: AJV + cross-file rules
+│   └── migrate-to-d1.ts       # JSON → SQL generator
 │
 ├── tests/
-│   ├── data.test.ts           # Data layer tests (140 lines)
-│   ├── validate.test.ts       # Validation tests (60 lines)
+│   ├── data.test.ts           # Data layer tests
+│   ├── validate.test.ts       # Validation tests
 │   └── fixtures/bad/          # 5 bad fixture files (rejected by validator)
 │
-├── client_build/web/          # Build output Flutter web (SPA)
+├── web/                       # React SPA (public + admin) → di-deploy sebagai ASSETS
+├── migrations/                # D1 migrations (0001 … 0006)
 ├── wrangler.jsonc             # Cloudflare Workers config
 ├── package.json               # Node.js project config
 ├── worker-configuration.d.ts  # Auto-generated Worker env types
-├── .github/workflows/ci.yml   # CI: validate + test
-├── LICENSE                    # SSPL v1
-├── CONTRIBUTING.md            # Panduan kontribusi
 └── README.md                  # File ini
 ```
 

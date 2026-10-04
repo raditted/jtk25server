@@ -35,18 +35,22 @@ export default function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm">
+    <div
+      aria-live="polite"
+      aria-atomic="false"
+      className="pointer-events-none fixed bottom-4 right-4 z-[9999] flex max-w-sm flex-col gap-2"
+    >
       {toasts.map((t) => (
         <div
           key={t.id}
           role="alert"
           data-testid="toast"
-          className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium cursor-pointer transition-opacity ${
+          className={`pointer-events-auto flex cursor-pointer items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium shadow-pop transition-opacity ${
             t.variant === 'success'
-              ? 'bg-green-600 text-white'
+              ? 'bg-emerald-600 text-white'
               : t.variant === 'error'
                 ? 'bg-red-600 text-white'
-                : 'bg-gray-800 text-white dark:bg-gray-700'
+                : 'bg-slate-800 text-white dark:bg-slate-700'
           }`}
           onClick={() => dismiss(t.id)}
         >

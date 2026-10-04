@@ -1,27 +1,3 @@
-import dosenJson from "../data/dosen.json";
-import calendarJson from "../data/calendar.json";
-import announcementsJson from "../data/announcements.json";
-import penggantiJson from "../data/pengganti.json";
-import roomsJson from "../data/rooms.json";
-
-// ─── Static list files (still bundled at build time) ─────────────────────────
-
-export const LIST_FILES = [
-  "announcements.json",
-  "dosen.json",
-  "calendar.json",
-  "pengganti.json",
-  "rooms.json",
-] as const;
-
-const LIST_DATA_MAP: Record<string, unknown> = {
-  "announcements.json": announcementsJson,
-  "dosen.json": dosenJson,
-  "calendar.json": calendarJson,
-  "pengganti.json": penggantiJson,
-  "rooms.json": roomsJson,
-};
-
 // ─── Class file names (for backward-compatible metadata) ─────────────────────
 
 export const CLASS_FILES = [
@@ -46,21 +22,7 @@ export const CLASS_FILES = [
   "schedules_D4_4B.json",
 ] as const;
 
-export const ALL_FILES: readonly string[] = [...CLASS_FILES, ...LIST_FILES];
-
-// ─── Legacy helpers (for static list files only) ─────────────────────────────
-
-export function getFileData(file: string): unknown {
-  return LIST_DATA_MAP[file] ?? null;
-}
-
-export function getFilesData(files: readonly string[]): Map<string, unknown> {
-  const results = new Map<string, unknown>();
-  for (const f of files) {
-    results.set(f, LIST_DATA_MAP[f] ?? null);
-  }
-  return results;
-}
+export const ALL_FILES: readonly string[] = [...CLASS_FILES];
 
 // ─── D1 schedule types ───────────────────────────────────────────────────────
 
@@ -298,7 +260,7 @@ export interface RoomRow {
   id: number;
   ext_id: string;
   name: string;
-  type: "kelas" | "lab";
+  type: "kelas" | "lab" | "online";
 }
 
 // ─── Events CRUD ─────────────────────────────────────────────────────────────

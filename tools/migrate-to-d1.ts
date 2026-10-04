@@ -74,7 +74,7 @@ for (const file of scheduleFiles) {
       const esc = (v: string) => v.replace(/'/g, "''");
 
       sqlStatements.push(
-        `INSERT INTO schedules (class_name, semester, day, time, course_code, course_name, type, lecturer_code, lecturer, room, slot_order) VALUES ('${esc(class_name)}', '${esc(semester)}', '${esc(daySchedule.day)}', '${esc(s.time)}', '${esc(s.course_code)}', '${esc(s.course_name)}', '${esc(s.type)}', '${esc(s.lecturer_code)}', '${esc(s.lecturer)}', '${esc(s.room)}', ${slotOrder});`,
+        `INSERT INTO schedules (class_name, semester, day, time, course_code, course_name, type, lecturer_code, lecturer, room, mode, slot_order) VALUES ('${esc(class_name)}', '${esc(semester)}', '${esc(daySchedule.day)}', '${esc(s.time)}', '${esc(s.course_code)}', '${esc(s.course_name)}', '${esc(s.type)}', '${esc(s.lecturer_code)}', '${esc(s.lecturer)}', '${esc(s.room)}', '${esc(s.mode ?? "offline")}', ${slotOrder});`,
       );
     }
   }

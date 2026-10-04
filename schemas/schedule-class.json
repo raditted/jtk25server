@@ -90,7 +90,12 @@
         "room": {
           "type": "string",
           "minLength": 1,
-          "description": "Room identifier, e.g. D108-Kelas, H501-Lab. T"
+          "description": "Room identifier, e.g. D108-Kelas, H501-Lab. TI, Online-Google Meet"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["offline", "online"],
+          "description": "Session delivery mode. 'online' for remote sessions"
         }
       },
       "additionalProperties": false

@@ -20,3 +20,4 @@ INSERT OR IGNORE INTO rooms (ext_id, name, type) VALUES ('H501-Lab. TI', 'H501 L
 INSERT OR IGNORE INTO rooms (ext_id, name, type) VALUES ('H502-Lab. AI', 'H502 Lab. AI', 'lab');
 INSERT OR IGNORE INTO rooms (ext_id, name, type) VALUES ('H504-Kelas', 'H504 Kelas', 'kelas');
 INSERT OR IGNORE INTO rooms (ext_id, name, type) VALUES ('H506-Kelas', 'H506 Kelas', 'kelas');
+INSERT OR IGNORE INTO rooms (ext_id, name, type) VALUES ('Online-Google Meet', 'Online (Google Meet)', 'online');

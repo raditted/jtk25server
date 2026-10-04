@@ -52,6 +52,13 @@ export function validateDir(
     (dosenData.data as any[]).map((d: any) => d.code),
   );
 
+  // Room ids must resolve to a known room, and mode must agree with the
+  // room's type — otherwise the occupancy view and the Online badge disagree.
+  const roomsData = JSON.parse(readFileSync(join(dosenSource, "rooms.json"), "utf-8"));
+  const roomTypes = new Map<string, string>(
+    (roomsData.data as any[]).map((r: any) => [r.id as string, (r.type ?? "") as string]),
+  );
+
   const ajv = new Ajv({ allErrors: true, strict: false });
   addFormats(ajv);
 
@@ -76,6 +83,28 @@ export function validateDir(
     } catch {
       /* surfaces as error below */
     }
+  }
+
+  /** Validate a session's room against rooms.json, and mode against its type. */
+  function checkRoom(sess: any, where: string): string[] {
+    const errors: string[] = [];
+    const room = sess?.room;
+    if (typeof room !== "string") return errors;
+
+    const roomType = roomTypes.get(room);
+    if (roomType === undefined) {
+      errors.push(`cross-ref: room "${room}" not found in rooms.json (${where})`);
+      return errors;
+    }
+
+    const mode = sess?.mode ?? "offline";
+    const roomIsOnline = roomType === "online";
+    if (roomIsOnline !== (mode === "online")) {
+      errors.push(
+        `cross-ref: mode "${mode}" contradicts room "${room}" of type "${roomType}" (${where})`,
+      );
+    }
+    return errors;
   }
 
   const results: ValidationResult[] = [];
@@ -111,6 +140,7 @@ export function validateDir(
                   );
                 }
               }
+              errors.push(...checkRoom(sess, "session"));
             }
           }
         }
@@ -131,6 +161,7 @@ export function validateDir(
                     );
                   }
                 }
+                errors.push(...checkRoom(sess, `pengganti id="${entry.id}"`));
               }
             }
           }
