@@ -17,7 +17,7 @@
       ]},
       {"day":"RABU","sessions":[
         {"time":"07.00-08.40","course_code":"25TI2102","course_name":"Matematika Diskrit Lanjut","type":"PR","lecturer_code":"TG","lecturer":"Trisna Gelar, S.T., M.Kom.","room":"D107-Lab. RPL"},
-        {"time":"08.40-10.40","course_code":"25TI2101","course_name":"Arsitektur dan Organisasi Komputer","type":"TE","lecturer_code":"MV","lecturer":"Maisevli Harika, S.ST., M.T., M.Eng","room":"D224-Kelas"},
+        {"time":"08.40-10.40","course_code":"25TI2101","course_name":"Arsitektur dan Organisasi Komputer","type":"TE","lecturer_code":"MV","lecturer":"Maisevli Harika, S.ST., M.T., M.Eng","room":"Online-Google Meet","mode":"online"},
         {"time":"13.00-14.40","course_code":"25TI2103","course_name":"Aljabar Linear","type":"TE","lecturer_code":"NJ","lecturer":"Dr. Nurjannah Syakrani, DRA., M.T.","room":"D111-Kelas"}
       ]},
       {"day":"KAMIS","sessions":[

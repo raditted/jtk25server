@@ -15,7 +15,7 @@
         {"time":"13.00-14.40","course_code":"25TI2103","course_name":"Aljabar Linear","type":"TE","lecturer_code":"NJ","lecturer":"Dr. Nurjannah Syakrani, DRA., M.T.","room":"D108-Kelas"}
       ]},
       {"day":"RABU","sessions":[
-        {"time":"07.00-08.40","course_code":"25TI2101","course_name":"Arsitektur dan Organisasi Komputer","type":"TE","lecturer_code":"MV","lecturer":"Maisevli Harika, S.ST., M.T., M.Eng","room":"D111-Kelas"},
+        {"time":"07.00-08.40","course_code":"25TI2101","course_name":"Arsitektur dan Organisasi Komputer","type":"TE","lecturer_code":"MV","lecturer":"Maisevli Harika, S.ST., M.T., M.Eng","room":"Online-Google Meet","mode":"online"},
         {"time":"08.40-10.40","course_code":"25TI2107","course_name":"Komunikasi Data dan Jaringan","type":"TE","lecturer_code":"SF","lecturer":"Sofy Fitriani, S.S.T., M.Kom","room":"D223-Kelas"},
         {"time":"13.50-15.20","course_code":"25TI2106","course_name":"Sistem Operasi","type":"PR","lecturer_code":"RZ","lecturer":"Muhammad Riza Alifi, S.T., M.T.","room":"D116-Lab. PjBL-2"}
       ]},
